@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PolicyOS · Tara - Agentic Policy & Company Brain</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Data + runtime core -->
+  <script src="data.js"></script>
+  <script src="core.js"></script>
+  <script src="llm.js"></script>
+  <script src="sim.js"></script>
+  <script src="pdf.js"></script>
+
+  <!-- View modules (each registers itself via App.registerView) -->
+  <script src="views/home.js"></script>
+  <script src="views/dashboard.js"></script>
+  <script src="views/policies.js"></script>
+  <script src="views/directory.js"></script>
+  <script src="views/access.js"></script>
+  <script src="views/usersaccess.js"></script>
+  <script src="views/regulatory.js"></script>
+  <script src="views/rulesense.js"></script>
+  <script src="views/approvals.js"></script>
+  <script src="views/usermgmt.js"></script>
+  <script src="views/category.js"></script>
+  <script src="views/bredecoder.js"></script>
+  <script src="views/insightgen.js"></script>
+  <script src="views/assessments.js"></script>
+  <!-- views/connectors.js - PARKED (connectors picked up ~2 months out) -->
+
+  <script src="tour.js"></script>
+
+  <!-- Boot -->
+  <script>window.addEventListener('DOMContentLoaded', function () { App.boot(); });</script>
+</body>
+</html>

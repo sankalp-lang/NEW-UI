@@ -1,0 +1,64 @@
+{
+ "rules": [
+  {
+   "concept_key": "consumer_credit_risk_weight_banks",
+   "rule_type": "numeric",
+   "numeric_operator": "=",
+   "numeric_threshold": 125,
+   "normalized_text": "Banks 125%",
+   "verbatim_source_span": "it has been decided to increase the risk weights in respect of consumer credit exposure of commercial banks (outstanding as well as new), including personal loans, but excluding housing loans, education loans, vehicle loans and loans secured by gold and gold jewellery, by 25 percentage points to 125%.",
+   "para_ref": "2A(a)",
+   "category": "Risk Weightage",
+   "sub_category": "Consumer Credit Risk Weight",
+   "entity": "Commercial Banks",
+   "effective_date": null,
+   "compliance_deadline": null,
+   "confidence": "high"
+  },
+  {
+   "concept_key": "credit_card_receivables_risk_weight_scbs",
+   "rule_type": "numeric",
+   "numeric_operator": "=",
+   "numeric_threshold": 150,
+   "normalized_text": "SCB cc 150%",
+   "verbatim_source_span": "increase the risk weights on such exposures by 25 percentage points to 150% and 125% for SCBs and NBFCs respectively.",
+   "para_ref": "2A(c)",
+   "category": "Risk Weightage",
+   "sub_category": "Credit Card Receivables Risk Weight",
+   "entity": "SCBs",
+   "effective_date": null,
+   "compliance_deadline": null,
+   "confidence": "high"
+  },
+  {
+   "concept_key": "bank_exposure_nbfc_exclusions",
+   "rule_type": "text",
+   "numeric_operator": "none",
+   "numeric_threshold": null,
+   "normalized_text": "HFC/PSL excluded (this is really an applicability carve-out, not a rule)",
+   "verbatim_source_span": "For this purpose, loans to HFCs, and loans to NBFCs which are eligible for classification as priority sector in terms of the extant instructions shall be excluded.",
+   "para_ref": "2B",
+   "category": "Risk Weightage",
+   "sub_category": "Bank Exposure to NBFCs",
+   "entity": "SCBs",
+   "effective_date": null,
+   "compliance_deadline": null,
+   "confidence": "high"
+  },
+  {
+   "concept_key": "implementation_deadline_2ca",
+   "rule_type": "numeric",
+   "numeric_operator": "<=",
+   "numeric_threshold": 20240229,
+   "normalized_text": "Implement 2C(a) by 2024-02-29",
+   "verbatim_source_span": "All REs shall endeavour to comply with the provisions at paragraph 2C(a) at the earliest, but in any case shall implement them by no later than February 29, 2024.",
+   "para_ref": "4",
+   "category": "Implementation Timeline",
+   "sub_category": "Compliance Deadline",
+   "entity": "All REs",
+   "effective_date": null,
+   "compliance_deadline": null,
+   "confidence": "high"
+  }
+ ]
+}
