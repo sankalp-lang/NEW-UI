@@ -212,11 +212,11 @@ chk(Object.keys(_pols58).length >= 3, 'Regulatory: one amendment (AMD-58) affect
 var _plChanges = App.regulatoryView._changesForPolicy('P-PL');
 var _plAmds = {}; _plChanges.forEach(function(c){_plAmds[c.amendment.id]=1;});
 chk(_plChanges.length >= 3 && Object.keys(_plAmds).length >= 2, 'Regulatory: one policy (P-PL) collects changes from multiple amendments');
-chk(typeof App.regulatoryView.openEditor==='function' && typeof App.regulatoryView._downloadPdf==='function' && typeof App.regulatoryView._downloadWord==='function' && typeof App.regulatoryView._sendApproval==='function' && typeof App.regulatoryView._confirmSend==='function', 'Regulatory: editor + PDF/Word download + send-for-approval (workflow chooser) all present');
+chk(typeof App.regulatoryView.openEditor==='function' && typeof App.regulatoryView._downloadPdf==='function' && typeof App.regulatoryView._downloadWord==='function' && typeof App.regulatoryView._preview==='function' && typeof App.regulatoryView._previewDocHtml==='function' && typeof App.regulatoryView._confirmSend==='function', 'Regulatory: editor + preview + PDF/Word download + confirm-send all present');
 chk(App.pdf.build('amendment','AMD-58').pages.length >= 2, 'PDF: amendment renders as a circular-style PDF (left pane)');
 App.regulatoryView.openEditor('P-PL');
 var _ed=null; try { _ed = App.regulatoryView._renderEditor(); } catch(e){ _ed = 'ERR '+e; }
-chk(typeof _ed==='string' && /contenteditable/.test(_ed) && _ed.indexOf('Send for approval') >= 0 && _ed.indexOf('Download PDF') >= 0, 'Regulatory: two-PDF editor renders (editable + PDF/Word + send): '+String(_ed).slice(0,40));
+chk(typeof _ed==='string' && /contenteditable/.test(_ed) && _ed.indexOf('Preview') >= 0, 'Regulatory: two-PDF editor renders (editable draft + Preview & export): '+String(_ed).slice(0,40));
 var _c = _plChanges.slice(0,3).map(function(c){return c.id;});
 App.regulatoryView._accept(_c[0]);                                   // approve AI suggestion
 App.regulatoryView._setSuggest(_c[1],'48%'); App.regulatoryView._applySuggestion(_c[1]);  // reviewer's own wording in the PDF
@@ -226,6 +226,8 @@ App.regulatoryView.st(_c[0]).comment = 'reviewed by compliance';
 var _doc = App.regulatoryView._revisedDocHtml(App.policy('P-PL'));
 chk(_doc.indexOf(_plChanges[0].suggested) >= 0 && _doc.indexOf('48%') >= 0, 'Regulatory: revised doc applies approved value AND reviewer suggestion');
 chk(/reviewed by compliance/.test(_doc), 'Regulatory: reviewer comment included in the revised doc');
+var _prev = App.regulatoryView._previewDocHtml(App.policy('P-PL'));
+chk(/prev__doc/.test(_prev) && _prev.indexOf('48%') >= 0, 'Regulatory: Preview renders the revised policy with the applied changes');
 // downloads (PDF + Word) do NOT route to Approvals
 var _apprBefore = DB.approvals.length;
 try { App.regulatoryView._downloadWord(); } catch(e){}
@@ -260,6 +262,13 @@ var _addPid = DB.policies.map(function(p){return p.id;}).find(function(id){ retu
 var _addChBefore = App.regulatoryView._changesForPolicy(_addPid).length;
 App.regulatoryView._addPolicy(_amdId, _addPid);
 chk(App.regulatoryView._effectivePolicyIds(DB.amendments[0]).indexOf(_addPid) >= 0 && App.regulatoryView._changesForPolicy(_addPid).length === _addChBefore + 1, 'Regulatory: reviewer can add a new affected policy (with an editable manual change)');
+// Phase-1 manual upload: adds a self-uploaded circular with an AI-generated name + one-line summary
+var _amdBefore = DB.amendments.length;
+App.regulatoryView._upFileName = 'RBI_circular.pdf';
+try { App.regulatoryView._submitUpload(); } catch(e){}
+chk(DB.amendments.length === _amdBefore + 1 && DB.amendments[0].source==='self' && !!DB.amendments[0].title && !!DB.amendments[0].summary, 'Regulatory: manual upload adds a self-uploaded circular with AI-generated name + summary');
+DB.amendments.shift(); // undo the uploaded circular so later render tests are unaffected
+
 App.regulatoryView.autorun = true; App.regulatoryView._amd = {}; App.regulatoryView.editor = null; App.regulatoryView._st = {}; App.regulatoryView._audit = [];
 
 // "Ask Tara" fully removed: no nav item, no floating bot button, no contextual buttons
@@ -381,11 +390,11 @@ var _apErr=null; try { App.approvalsView.open(_req.id); App.closeModal(); } catc
 chk(!_apErr, 'Approvals: New Policy request detail renders its custom stages (null policy safe): '+(_apErr||''));
 DB.approvals.shift(); App.state.addPolicy = null; App.state.user = admin;
 
-// Regulatory editor: "Simulate impact" of the regulatory change, beside Download PDF
+// Regulatory editor: "Simulate impact" of the regulatory change, beside Preview & export
 App.state.user = admin; App.regulatoryView.editor = null; App.regulatoryView._st = {};
 App.regulatoryView.openEditor('P-PL');
 var _regEd = App.regulatoryView._renderEditor();
-chk(/Simulate impact/.test(_regEd) && _regEd.indexOf('Simulate impact') < _regEd.indexOf('Download PDF'), 'Regulatory: Simulate-impact button sits beside Download PDF (simulable policy)');
+chk(/Simulate impact/.test(_regEd) && _regEd.indexOf('Simulate impact') < _regEd.indexOf('Preview'), 'Regulatory: Simulate-impact button sits beside Preview & export (simulable policy)');
 chk(typeof App.regulatoryView._simulate==='function' && typeof App.regulatoryView._simOverride==='function', 'Regulatory: simulate handler + override merge present');
 var _ov = App.regulatoryView._simOverride('P-PL');
 chk(_ov && (_ov.minCibil || _ov.maxFoir), 'Regulatory: sim override merges the (non-rejected) regulatory changes');
