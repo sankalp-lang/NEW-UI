@@ -85,7 +85,7 @@ App.regulatoryView = {
       <p class="reg-rel__sum">${App.esc(a.summary)}</p>
       ${a.description ? `<p class="reg-rel__note">${App.icon('info')} ${App.esc(a.description)}</p>` : ''}
       ${pendingExtraction
-        ? `<div class="reg-rel__extract">${App.icon('sparkles')}<span class="muted" style="font-size:12px">Tara extracted ${a.extracted.length} rule${a.extracted.length === 1 ? '' : 's'} - review before comparing against a policy.</span><div style="flex:1"></div><button class="btn btn--sm btn--primary" onclick="App.regulatoryView.openDetail('${a.id}')">${App.icon('edit')} Review extraction</button></div>`
+        ? `<div class="reg-rel__extract">${App.icon('sparkles')}<span class="muted" style="font-size:12px">PolicyOS extracted ${a.extracted.length} rule${a.extracted.length === 1 ? '' : 's'} - review before comparing against a policy.</span><div style="flex:1"></div><button class="btn btn--sm btn--primary" onclick="App.regulatoryView.openDetail('${a.id}')">${App.icon('edit')} Review extraction</button></div>`
         : informational ? `<div class="muted" style="font-size:12px">No policy changes mapped - open the circular to review for awareness.</div>` : `<div class="reg-rel__pols">${chips}${addBtn}</div>${decision}`}
     </div>`;
   },
@@ -401,7 +401,7 @@ App.regulatoryView = {
     return '<!doctype html><html><head><meta charset="utf-8"><title>' + App.esc(p.name) + ' (revised draft)</title>'
       + '<style>body{font-family:Calibri,Arial,sans-serif;max-width:720px;margin:48px auto;color:#1c1a16;line-height:1.5}h1{font-size:22px}.r{padding:5px 0;border-bottom:1px solid #eee}.m{color:#6b665c}</style></head><body>'
       + '<h1>' + App.esc(p.name) + ' - revised draft (' + App.esc(p.version) + ')</h1>'
-      + '<p class="m">Prepared in PolicyOS · Tara from regulatory amendments. Print to PDF, sign, and submit to the approval workflow.</p>'
+      + '<p class="m">Prepared in PolicyOS from regulatory amendments. Print to PDF, sign, and submit to the approval workflow.</p>'
       + rows + (notes ? '<h3>Reviewer comments</h3><ul>' + notes + '</ul>' : '')
       + '<hr><p class="m" style="font-size:12px">Signature: ____________________   Date: __________</p></body></html>';
   },
@@ -538,21 +538,21 @@ App.regulatoryView = {
   },
 
   /* ---------------- Phase 1: MANUAL circular upload ----------------
-     Tara (backend) generates the circular's name + one-line summary from the PDF; the uploader may add an
+     PolicyOS (backend) generates the circular's name + one-line summary from the PDF; the uploader may add an
      optional description. Auto-fetch from regulator sites is a later phase. */
   _upFileName: '',
   uploadModal() {
     this._upFileName = '';
     App.openModal({
-      title: 'Upload a regulator circular', sub: 'Phase 1 · manual upload. Tara reads the PDF and generates the name and one-line summary.', lg: true,
+      title: 'Upload a regulator circular', sub: 'Phase 1 · manual upload. PolicyOS reads the PDF and generates the name and one-line summary.', lg: true,
       body: `<input type="file" id="upInput" accept="application/pdf" style="display:none" onchange="App.regulatoryView._onUploadFile(this)">
         <div class="dropzone" id="upDrop" onclick="document.getElementById('upInput').click()">${App.icon('download')}
           <div style="font-weight:600;margin-top:8px">Drop a circular PDF here, or click to choose a file</div>
-          <div class="muted" style="font-size:12.5px;margin-top:3px">PDF only · Tara auto-generates the name and summary from the document</div>
+          <div class="muted" style="font-size:12.5px;margin-top:3px">PDF only · PolicyOS auto-generates the name and summary from the document</div>
           <div id="upFile" class="up-file" hidden></div></div>
         <div class="login__label" style="margin-top:16px">Description <span class="muted" style="font-weight:400;text-transform:none">· optional</span></div>
         <textarea class="textarea" id="upDesc" rows="3" placeholder="Add context for reviewers (optional). The name and summary are generated automatically."></textarea>
-        <div class="up-ai">${App.icon('sparkles')} <span>Tara generates the circular <strong>name</strong> and <strong>one-line summary</strong> from the PDF. Auto-fetch from regulator sites is coming in a later phase.</span></div>`,
+        <div class="up-ai">${App.icon('sparkles')} <span>PolicyOS generates the circular <strong>name</strong> and <strong>one-line summary</strong> from the PDF. Auto-fetch from regulator sites is coming in a later phase.</span></div>`,
       footer: `<button class="btn" onclick="App.closeModal()">Cancel</button><button class="btn btn--primary" onclick="App.regulatoryView._submitUpload()">${App.icon('check')} Upload &amp; analyze</button>`
     });
   },
@@ -600,16 +600,16 @@ App.regulatoryView = {
     const gen = this._aiGenerate(fname, desc);
     const n = (DB.amendments || []).length;
     const id = 'UPL-' + (n + 1); const ref = 'RBI/2026-27/' + (60 + n);
-    // Tara "detects" a plausible in-scope, editable policy for the compare step (real detection is backend AI)
+    // PolicyOS "detects" a plausible in-scope, editable policy for the compare step (real detection is backend AI)
     const target = DB.policies.find(p => App.canEditPolicy(p, u) && p.category === gen.cat) || DB.policies.find(p => App.canEditPolicy(p, u));
     const extracted = (gen.extracted || []).map((r, i) => ({ id: id + '-x' + i, conceptKey: r.key, text: r.text, paraRef: r.para, category: r.category, confidence: r.confidence, validationStatus: r.status }));
     // changes stay EMPTY until the reviewer confirms rules and clicks "Compare against policy"
     const rel = { id: id, regulator: 'RBI', ref: ref, title: gen.t, date: '27 Jul 2026', summary: gen.s, changes: [], source: 'self', extracted: extracted, targetPolicy: target ? target.id : null };
     if (desc) rel.description = desc;
     (DB.amendments || []).unshift(rel);
-    this._log('Uploaded circular', gen.t + ' (' + ref + ') · ' + fname + ' · Tara extracted ' + extracted.length + ' rule' + (extracted.length === 1 ? '' : 's'));
+    this._log('Uploaded circular', gen.t + ' (' + ref + ') · ' + fname + ' · PolicyOS extracted ' + extracted.length + ' rule' + (extracted.length === 1 ? '' : 's'));
     App.closeModal();
-    App.toast('Circular uploaded - Tara extracted ' + extracted.length + ' rule' + (extracted.length === 1 ? '' : 's') + ' for review', 'ok');
+    App.toast('Circular uploaded - PolicyOS extracted ' + extracted.length + ' rule' + (extracted.length === 1 ? '' : 's') + ' for review', 'ok');
     // go straight to the extraction-review screen
     this.detail = { amdId: id }; this.editor = null; this._refresh();
   },
@@ -690,7 +690,7 @@ App.regulatoryView = {
     const statusTxt = rules.length && confirmed === rules.length ? 'ready_for_compare' : 'reviewing';
     return `<div class="page cdet">
       <div class="reg-bk" onclick="App.regulatoryView._backDetail()">${App.icon('arrow')} Back to all circulars</div>
-      <div class="page__head"><div><h1>Circular Detail</h1><p>Tara extracted ${rules.length} rule${rules.length === 1 ? '' : 's'} from this circular. Confirm, reject, or correct each one, then compare the confirmed rules against the policy.</p></div></div>
+      <div class="page__head"><div><h1>Circular Detail</h1><p>PolicyOS extracted ${rules.length} rule${rules.length === 1 ? '' : 's'} from this circular. Confirm, reject, or correct each one, then compare the confirmed rules against the policy.</p></div></div>
       <div class="cdet__grid">
         <aside class="cdet__side">
           <div class="cdet__meta">

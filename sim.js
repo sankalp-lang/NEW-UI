@@ -1,9 +1,9 @@
 /* ============================================================
-   PolicyOS · Tara - Impact Simulator
+   PolicyOS - Impact Simulator
    • App.sim      - evaluate a credit policy's thresholds against the
                     anonymized test cohort; report approval/NPA/flip deltas.
    • App.simView  - the modal UI (knobs → run → result → propose to Approvals).
-   Used by: policy detail, RuleSense, Regulatory radar, Approvals, and Tara.
+   Used by: policy detail, RuleSense, Regulatory radar, Approvals, and PolicyOS.
    ============================================================ */
 (function () {
   const App = window.App;

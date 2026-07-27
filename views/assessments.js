@@ -129,7 +129,7 @@ questionsFor(a) {
     ],
     Others: [
       { q: 'Who owns the canonical version of a published policy in PolicyOS?', opts: ['Any staff member', 'The assigned policy owner', 'Finance team', 'External auditor'], correct: 1 },
-      { q: 'When are policy access rules enforced by Tara?', opts: ['Only in the prompt', 'At retrieval time', 'Never', 'Only for admins'], correct: 1 }
+      { q: 'When are policy access rules enforced by PolicyOS?', opts: ['Only in the prompt', 'At retrieval time', 'Never', 'Only for admins'], correct: 1 }
     ]
   };
   return bank[a.category] || bank.Others;
@@ -430,7 +430,7 @@ App.assessmentsView = {
     const st = App.state.assessments;
     const vis = App.visiblePolicies(App.currentUser());
     App.openModal({
-      title: 'Generate questions with AI', sub: 'Tara drafts MCQs from policies you can access.',
+      title: 'Generate questions with AI', sub: 'PolicyOS drafts MCQs from policies you can access.',
       body: `<div class="field"><label>Select policies <span class="req">*</span></label>
           <div style="max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px">
           ${vis.length ? vis.map(p => `<label class="minirow" style="cursor:pointer"><input type="checkbox" class="aiPol" value="${p.id}" ${p.category === st.details.category ? 'checked' : ''}/><span style="flex:1">${App.esc(p.name)}</span><span class="tag">${App.esc(p.category)}</span></label>`).join('') : '<div class="muted" style="padding:8px">No accessible policies.</div>'}

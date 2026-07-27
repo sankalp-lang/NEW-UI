@@ -153,12 +153,12 @@ var spStaff = App.suggestPrompts(staff);
 chk(spStaff.length>=2 && !spStaff.some(function(p){return p.tag==='Lending' || p.tag==='Compliance' || p.tag==='Simulate';}), 'Prompts: staff prompts are permission-faithful (no Lending/Compliance/Simulate)');
 
 // Model config: selecting a model persists & shows even without a key (demo); a key makes it live
-try { localStorage.setItem('tara_llm_cfg', JSON.stringify({primary:{provider:'anthropic',model:'claude-opus-4-8',key:''}})); } catch(e){}
+try { localStorage.setItem('policyos_llm_cfg', JSON.stringify({primary:{provider:'anthropic',model:'claude-opus-4-8',key:''}})); } catch(e){}
 chk(App.llm.selected()===true && App.llm.configured()===false, 'Model: keyless selection is "selected" but not live');
 chk(/Claude Opus 4\.8/.test(App.llm.statusLabel()) && /demo/.test(App.llm.statusLabel()), 'Model: header shows the chosen model (demo tag, no key)');
-try { localStorage.setItem('tara_llm_cfg', JSON.stringify({primary:{provider:'anthropic',model:'claude-opus-4-8',key:'sk-ant-x'}})); } catch(e){}
+try { localStorage.setItem('policyos_llm_cfg', JSON.stringify({primary:{provider:'anthropic',model:'claude-opus-4-8',key:'sk-ant-x'}})); } catch(e){}
 chk(App.llm.configured()===true && /Claude Opus 4\.8/.test(App.llm.statusLabel()) && !/demo/.test(App.llm.statusLabel()), 'Model: with a key the header shows it live (no demo tag)');
-try { localStorage.setItem('tara_llm_cfg','{}'); } catch(e){}
+try { localStorage.setItem('policyos_llm_cfg','{}'); } catch(e){}
 chk(/Demo mode/.test(App.llm.statusLabel()), 'Model: no selection falls back to Demo mode');
 
 // Nav: admin-only Administration (Users & access + Categories); connectors parked; PM excluded

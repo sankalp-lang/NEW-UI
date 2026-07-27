@@ -1,5 +1,5 @@
 /* ============================================================
-   PolicyOS · Tara - embedded document viewer (App.pdf)
+   PolicyOS - embedded document viewer (App.pdf)
    No real PDFs in the prototype: we synthesize a paginated, page-numbered
    document from a policy's own content (summary → parameters → rules → governance)
    or from an uploaded circular's clauses. Every answer/redline that quotes a page

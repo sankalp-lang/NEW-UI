@@ -1,5 +1,5 @@
 /* ============================================================
-   PolicyOS · Tara - Design System v2
+   PolicyOS - Design System v2
    Editorial · warm-neutral · flat · Playfair display + Inter UI.
    One restrained accent. Hairlines over shadows. No gradients.
    (All class names preserved from v1 - this is a re-skin.)
@@ -7,9 +7,9 @@
 
 /* Letters render in Playfair Display; numbers + symbols/punctuation render in a clean sans
    (Inter if installed, else the system grotesque). The unicode-range maps digits/symbols to
-   'TaraNum'; everything else (letters) falls through to Playfair Display. */
+   'NumGlyphs'; everything else (letters) falls through to Playfair Display. */
 @font-face {
-  font-family: 'TaraNum';
+  font-family: 'NumGlyphs';
   src: local('Inter'), local('Inter Variable'), local('Helvetica Neue'), local('Helvetica'), local('Arial'), local('Segoe UI'), local('Roboto'), local('DejaVu Sans');
   unicode-range: U+0020-0040, U+005B-0060, U+007B-007E, U+00A0-00BF, U+2010-2027, U+2030-206F, U+20A0-20BF, U+2190-21FF, U+2200-22FF;
 }
@@ -509,8 +509,8 @@ pre.code .k{color:#b3a7e0;} pre.code .s{color:#9cc7a6;} pre.code .c{color:#8a847
 .brand-logo { display:inline-grid; place-items:center; vertical-align:middle; flex-shrink:0; }
 .brand-logo svg { display:block; }
 .src-chip.llm { color:var(--ink-2); background:var(--surface-2); border-color:var(--line); }
-.tara-status { display:inline-flex; align-items:center; gap:6px; }
-.tara-status.is-live { color:var(--brand-700); border-color:var(--brand-200); background:var(--brand-50); }
+.conn-status { display:inline-flex; align-items:center; gap:6px; }
+.conn-status.is-live { color:var(--brand-700); border-color:var(--brand-200); background:var(--brand-50); }
 .setup-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:4px 0 12px; }
 .prov-row { margin-bottom:14px; }
 .prov-row__h { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; margin-bottom:8px; }

@@ -30,7 +30,7 @@ App.registerView('usermgmt', {
     const canManage = u.role === 'admin';
 
     return `<div class="page">
-      <div class="page__head"><div><h1>User Management</h1><p>Provision PolicyOS users, assign roles, and scope their AI features and policy categories. Access here mirrors what each user can retrieve through Tara.</p></div><div class="spacer"></div>
+      <div class="page__head"><div><h1>User Management</h1><p>Provision PolicyOS users, assign roles, and scope their AI features and policy categories. Access here mirrors what each user can retrieve through PolicyOS.</p></div><div class="spacer"></div>
         ${canManage ? `<div class="splitbtn" style="position:relative;display:inline-flex">
           <button class="btn btn--primary" style="border-top-right-radius:0;border-bottom-right-radius:0" onclick="App.usermgmtView.addNew()">${App.icon('plus')} Manage Users</button>
           <button class="btn btn--primary" style="border-top-left-radius:0;border-bottom-left-radius:0;border-left:1px solid rgba(255,255,255,.25);padding-left:11px;padding-right:11px" onclick="App.usermgmtView.toggleMenu(event)" title="More options">${App.icon('chevron')}</button>
@@ -187,7 +187,7 @@ App.usermgmtView = {
       ['PolyGPT', p.features && p.features.polygpt, 'Answers policy questions'],
       ['Compare Policies', p.features && p.features.compare, 'Compare versions'],
       ['Assessments', p.features && p.features.assessments, 'Create AI questionnaires'],
-      ['Tara Copilot', p.features && p.features.copilot, 'Cross-source company brain']
+      ['PolicyOS Copilot', p.features && p.features.copilot, 'Cross-source company brain']
     ];
     const featRows = feats.map(([t, on, sub]) =>
       `<div class="minirow"><div style="flex:1"><b style="font-weight:600">${t}</b> <span class="muted" style="font-size:12px">· ${sub}</span></div>${on?App.ui.pill('Enabled','green',true):App.ui.pill('Off','gray')}</div>`

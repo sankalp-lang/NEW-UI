@@ -1,7 +1,7 @@
 /* ============================================================
-   PolicyOS · Tara - interactive guided tour
+   PolicyOS - interactive guided tour
    A spotlight (punched-hole scrim + accent ring) steps the user through
-   the REAL app: sidebar, Ask-Tara, their role's first block, ⌘K, persona
+   the REAL app: sidebar, the assistant, their role's first block, ⌘K, persona
    switch - then a role-aware "what's next" finish. Runs once per browser,
    relaunchable from the bottom-left chip or the user menu.
    ============================================================ */
@@ -15,18 +15,18 @@
     stepsFor(u) {
       const firstCard = { sel: '.content .grid', title: 'Your home', body: 'Quick actions, the numbers that matter, and what needs your attention - all in one place. The ask bar up top is your front door for anything ad-hoc.' };
       return [
-        { center: true, title: 'Welcome to PolicyOS · Tara', body: 'A 30-second tour of the on-prem, permission-faithful company brain. Skip anytime.' },
+        { center: true, title: 'Welcome to PolicyOS', body: 'A 30-second tour of the on-prem, permission-faithful company brain. Skip anytime.' },
         { sel: '.sidebar .nav', title: 'Role-aware navigation', body: 'The sidebar shows only what your role can use - Administration is admin-only.' },
         { sel: '#homeInput', title: 'Ask in plain English', body: 'Home is your single place to ask - eligibility, a leave rule, a what-if. Answers only from what you’re allowed to see, cited to the page.' },
         firstCard,
-        { sel: '.sidebar__search', title: 'Jump with ⌘K', body: 'Open the command palette to jump to any page, find a person, or ask Tara from anywhere.' },
+        { sel: '.sidebar__search', title: 'Jump with ⌘K', body: 'Open the command palette to jump to any page, find a person, or ask PolicyOS from anywhere.' },
         { sel: '.userchip', title: 'See the permission boundary', body: 'Switch persona here. Ask the same question as a staff user vs an admin and watch the answer change - that’s permission-faithful retrieval.' },
         { finish: true, title: 'You’re all set', body: 'Pick a place to start - or relaunch this tour anytime from the bottom-left.' }
       ];
     },
 
-    seen() { try { return localStorage.getItem('tara_tour_seen') === '1'; } catch (e) { return false; } },
-    _markSeen() { try { localStorage.setItem('tara_tour_seen', '1'); } catch (e) {} },
+    seen() { try { return localStorage.getItem('policyos_tour_seen') === '1'; } catch (e) { return false; } },
+    _markSeen() { try { localStorage.setItem('policyos_tour_seen', '1'); } catch (e) {} },
     maybeAutostart() { if (!TOUR.seen() && App.state.user) setTimeout(function () { if (App.state.user) TOUR.start(); }, 700); },
 
     start() {

@@ -1,5 +1,5 @@
 /* ============================================================
-   PolicyOS · Tara - Mock data (no backend, no DB, no creds)
+   PolicyOS - Mock data (no backend, no DB, no creds)
    Everything the prototype "knows" lives here.
    ============================================================ */
 window.DB = (function () {
@@ -90,7 +90,7 @@ window.DB = (function () {
 
   /* ---------- JIRA: projects + issues (synced) ---------- */
   const jiraProjects = [
-    { key:'TARA', name:'PolicyOS / Tara' },
+    { key:'TARA', name:'PolicyOS' },
     { key:'HS',   name:'HyperSync' },
     { key:'HV',   name:'HyperVerify' },
     { key:'GHRS', name:'Group HR System' },
@@ -98,7 +98,7 @@ window.DB = (function () {
     { key:'PLAT', name:'Platform & Infra' }
   ];
   const jiraIssues = [
-    { key:'TARA-101', title:'Revised PolicyOS - permission-faithful RBAC + Tara copilot', assignee:'THQ0144', project:'TARA', status:'In Progress', sprint:'Sprint 24', updated:'2h ago' },
+    { key:'TARA-101', title:'Revised PolicyOS - permission-faithful RBAC + PolicyOS copilot', assignee:'THQ0144', project:'TARA', status:'In Progress', sprint:'Sprint 24', updated:'2h ago' },
     { key:'TARA-104', title:'Per-user permission inheritance engine (ACL sync from sources)', assignee:'THQ0118', project:'TARA', status:'In Progress', sprint:'Sprint 24', updated:'40m ago' },
     { key:'TARA-110', title:'Migrate approval workflows to new access model', assignee:'THQ0101', project:'TARA', status:'In Review', sprint:'Sprint 24', updated:'1d ago' },
     { key:'TARA-118', title:'Unified command bar + intent routing (chat → action)', assignee:'THQ0092', project:'TARA', status:'In Progress', sprint:'Sprint 24', updated:'5h ago' },
@@ -306,7 +306,7 @@ window.DB = (function () {
 
   /* ---------- Incoming (manually uploaded) circulars - the manual-ingest counterpart to the auto feed.
      NBFCs face far more regulation than can be embedded, so a compliance owner uploads the PDF and
-     Tara checks it against the WHOLE policy library. One circular usually touches several policies;
+     PolicyOS checks it against the WHOLE policy library. One circular usually touches several policies;
      each clause carries the page it sits on (for citation) and the per-policy redline it implies. ---------- */
   const incomingCirculars = [
     { id:'INC-RBI-58', regulator:'RBI', ref:'RBI/2026-27/58', title:'Master Direction – Responsible Lending Conduct (Retail & MSME)',

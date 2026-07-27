@@ -39,7 +39,7 @@ App.registerView('category', {
         <button class="btn" onclick="App.categoryView.addSub()">${App.icon('plus')} Add Sub-Category</button>
         <button class="btn btn--primary" onclick="App.categoryView.add()">${App.icon('plus')} Add Category</button>
       </div>
-      <div class="info-banner">${App.icon('layers')} <span><strong>${DB.categories.length} categories</strong> · ${totalSubs} sub-categories in use. Disabling a category hides it and its policies everywhere - repository, filters, dropdowns and Tara - while keeping the underlying data intact.</span></div>
+      <div class="info-banner">${App.icon('layers')} <span><strong>${DB.categories.length} categories</strong> · ${totalSubs} sub-categories in use. Disabling a category hides it and its policies everywhere - repository, filters, dropdowns and PolicyOS - while keeping the underlying data intact.</span></div>
       <div class="toolbar">
         <div class="search-input">${App.icon('search')}<input id="catSearch" placeholder="Search categories…"/></div>
       </div>
@@ -70,14 +70,14 @@ App.categoryView = {
     const pc = DB.policies.filter(p => p.category === name).length;
     App.openModal({
       title: 'Disable “' + name + '”?', sub: 'This hides the category everywhere until you re-enable it.',
-      body: `<div class="lock-banner">${App.icon('alert')} <span>Are you sure you want to disable <strong>${App.esc(name)}</strong>? Disabling this will hide all related policies (<strong>${pc}</strong>) and its sub-categories everywhere - repository, filters, dropdowns and Tara. The underlying data is kept and you can re-enable it later.</span></div>`,
+      body: `<div class="lock-banner">${App.icon('alert')} <span>Are you sure you want to disable <strong>${App.esc(name)}</strong>? Disabling this will hide all related policies (<strong>${pc}</strong>) and its sub-categories everywhere - repository, filters, dropdowns and PolicyOS. The underlying data is kept and you can re-enable it later.</span></div>`,
       footer: `<button class="btn" onclick="App.closeModal()">Cancel</button><button class="btn btn--danger" onclick="App.categoryView.doDisable('${App.esc(name)}')">${App.icon('x')} Disable category</button>`
     });
   },
   doDisable(name) {
     const c = DB.categories.find(x => x.name === name); if (c) c.enabled = false;
     App.closeModal();
-    App.toast(`“${name}” disabled - hidden from filters, lists & Tara`, 'warn');
+    App.toast(`“${name}” disabled - hidden from filters, lists & PolicyOS`, 'warn');
     App.reload();
   },
   removeSub(cat, sub) {

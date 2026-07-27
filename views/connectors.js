@@ -9,7 +9,7 @@ App.registerView('connectors', {
 
     const modelCard = `
       <div class="card" style="margin-bottom:22px">
-        <div class="card__head">${App.icon('sparkles')}<h3>Tara's model</h3><div class="spacer"></div>
+        <div class="card__head">${App.icon('sparkles')}<h3>AI model</h3><div class="spacer"></div>
           <button class="btn btn--primary btn--sm" onclick="App.llm.openSetup()">${App.icon('zap')} ${llmMeta?'Manage model':'Connect a model'}</button></div>
         <div class="card__body">
           <p class="muted" style="font-size:13px;margin-bottom:14px">Bring your own key - Gemini, ChatGPT, Claude, Sarvam, Grok or Perplexity. On-prem &amp; LLM-agnostic: the model only ever receives the slice of data the signed-in user is allowed to see.</p>
@@ -45,7 +45,7 @@ App.registerView('connectors', {
 
     return `<div class="page">
       <div class="page__head"><div><h1>Connectors</h1><p>Connect your sources and your model. Everything runs on-prem; keys stay in your environment and each source's own permissions are inherited at retrieval.</p></div></div>
-      <div class="info-banner">${App.icon('lock')} <span><strong>Deploy-ready:</strong> connect Keka / greytHR / Jira / Notion with your real API keys or MCP servers, add a model key, and Tara answers for real - permission-faithfully.</span></div>
+      <div class="info-banner">${App.icon('lock')} <span><strong>Deploy-ready:</strong> connect Keka / greytHR / Jira / Notion with your real API keys or MCP servers, add a model key, and PolicyOS answers for real - permission-faithfully.</span></div>
       ${modelCard}
       <h3 style="margin:6px 0 12px;font-size:15px">Data sources</h3>
       <div class="grid grid-3">${DB.connectors.map(card).join('')}</div>

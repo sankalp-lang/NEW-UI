@@ -5,7 +5,7 @@ App.registerView('insightgen', {
     if (!App.canAccessView('insightgen', ctx.user)) return App.lockedPage('InsightGen', 'InsightGen is for administrators and policy managers.');
     const s = App.insightgenView._state();
     return `<div class="page">
-      <div class="page__head"><div><h1>InsightGen</h1><p>Ask questions of your data in plain English. Tara writes the SQL, runs it, and surfaces proactive insights before you have to ask.</p></div><div class="spacer"></div>
+      <div class="page__head"><div><h1>InsightGen</h1><p>Ask questions of your data in plain English. PolicyOS writes the SQL, runs it, and surfaces proactive insights before you have to ask.</p></div><div class="spacer"></div>
         <select class="select" id="igDb" onchange="App.insightgenView.setDb(this.value)">
           ${App.insightgenView.DBS.map(d=>`<option value="${App.esc(d)}" ${d===s.db?'selected':''}>${App.esc(d)}</option>`).join('')}
         </select>
@@ -129,7 +129,7 @@ App.insightgenView = {
           </div>
         </div>
       </div>
-      <div id="igThread" style="margin-top:16px">${s.thread.length ? '' : App.ui.empty('chart', 'No queries yet', 'Ask a question above - Tara generates the SQL, runs it on the analytics replica, and returns a result, chart and explanation.')}</div>`;
+      <div id="igThread" style="margin-top:16px">${s.thread.length ? '' : App.ui.empty('chart', 'No queries yet', 'Ask a question above - PolicyOS generates the SQL, runs it on the analytics replica, and returns a result, chart and explanation.')}</div>`;
   },
 
   run(text) {
@@ -328,7 +328,7 @@ App.insightgenView = {
         </div>
       </div>`;
     }).join('');
-    return `<div class="info-banner" style="background:var(--teal-50);border-color:#a5f3fc;color:var(--teal-600)">${App.icon('sparkles')} <span>Tara scans your data on a schedule and raises anomalies proactively - ranked by priority. ${DB.insights.length} active insight${DB.insights.length === 1 ? '' : 's'}.</span></div>
+    return `<div class="info-banner" style="background:var(--teal-50);border-color:#a5f3fc;color:var(--teal-600)">${App.icon('sparkles')} <span>PolicyOS scans your data on a schedule and raises anomalies proactively - ranked by priority. ${DB.insights.length} active insight${DB.insights.length === 1 ? '' : 's'}.</span></div>
       <div class="grid grid-3">${cards}</div>`;
   },
 
@@ -343,7 +343,7 @@ App.insightgenView = {
   investigate(id) {
     const i = DB.insights.find(x => x.id === id);
     if (!i) return;
-    // Route the relevant ones into a real Chat query; otherwise hand off to Tara.
+    // Route the relevant ones into a real Chat query; otherwise hand off to PolicyOS.
     let q = '';
     if (/rejection/i.test(i.title)) q = 'Top reasons for application rejection';
     else if (/npa/i.test(i.title)) q = 'NPA rate by product';

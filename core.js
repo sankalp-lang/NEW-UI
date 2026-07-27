@@ -1,6 +1,6 @@
 /* ============================================================
-   PolicyOS · Tara - Runtime core
-   Router · RBAC · Tara chat engine · shell · modal · cmd-palette
+   PolicyOS - Runtime core
+   Router · RBAC · PolicyOS chat engine · shell · modal · cmd-palette
    ============================================================ */
 window.App = (function () {
   const App = {};
@@ -139,7 +139,7 @@ window.App = (function () {
   App.canSeeComp = () => false;  // compensation removed entirely - not visible to anyone
 
   /* ---------------- CONNECTORS PARKED (picked up ~2 months out) - single version, no editions ----------------
-     Tara is policy-centric for now. These stubs keep every call site safe and policy-focused;
+     PolicyOS is policy-centric for now. These stubs keep every call site safe and policy-focused;
      restore the real source wiring (and editions, if ever) when connectors return. */
   App.connectedSources = () => [];
   App.hasSource = () => false;
@@ -290,7 +290,7 @@ window.App = (function () {
       if (p && !App.catEnabled(p.category)) p = null;  // disabled category → treat as unavailable
       if (p) {
         if (!App.canViewPolicy(p, user)) {
-          return { html:`<p>🔒 <strong>You don't have access to the “${App.esc(p.name)}”.</strong></p><p class="muted" style="margin-top:6px">It's in the ${App.esc(p.category)} category, which isn't assigned to you. Tara never answers from a source you can't already open - permission is enforced at retrieval, not in the prompt.</p>`,
+          return { html:`<p>🔒 <strong>You don't have access to the “${App.esc(p.name)}”.</strong></p><p class="muted" style="margin-top:6px">It's in the ${App.esc(p.category)} category, which isn't assigned to you. PolicyOS never answers from a source you can't already open - permission is enforced at retrieval, not in the prompt.</p>`,
                    sources:[{kind:'locked',label:p.name+' · no access'}] };
         }
         const facts = Object.entries(p.facts).map(([k,v]) => `<div class="minirow"><span class="muted">${App.esc(k)}</span><span class="spacer" style="flex:1"></span><b>${App.esc(v)}</b></div>`).join('');
@@ -308,7 +308,7 @@ window.App = (function () {
     }
 
     // ---- fallback (policy-centric) ----
-    return { html:`<p>I'm <strong>Tara</strong> - your policy copilot. I answer only from the policies <em>you're</em> permitted to see. Try:</p>
+    return { html:`<p>I'm <strong>PolicyOS</strong> - your policy copilot. I answer only from the policies <em>you're</em> permitted to see. Try:</p>
       <ul>
         <li><strong>Policies</strong> - “what's the leave policy?”, “personal loan eligibility?”, “KYC &amp; AML summary”</li>
         <li><strong>What-if</strong> - “what if we raise the CIBIL cutoff to 720?”</li>
@@ -324,8 +324,8 @@ window.App = (function () {
       if (!App.state.chat.length) {
         const labs = App.sourceLabels();
         const intro = labs.length
-          ? `I'm <strong>Tara</strong>. I pull from ${labs.map(l => '<strong>' + App.esc(l) + '</strong>').join(', ')} and your <strong>policies</strong> - only what your role can access.`
-          : `I'm <strong>Tara</strong>, scoped to your <strong>policy library</strong> and what your role can access.`;
+          ? `I'm <strong>PolicyOS</strong>. I pull from ${labs.map(l => '<strong>' + App.esc(l) + '</strong>').join(', ')} and your <strong>policies</strong> - only what your role can access.`
+          : `I'm <strong>PolicyOS</strong>, scoped to your <strong>policy library</strong> and what your role can access.`;
         body.innerHTML = `<div class="msg msg--ai"><div class="msg__av">${App.icon('sparkles')}</div><div class="msg__bubble">Hi ${App.esc(App.state.user.name.split(' ')[0])} - ${intro} What do you need?</div></div>
           <div class="chat-suggest">${suggestionsFor(App.state.user).map(s=>`<button class="chat-suggest__btn" onclick="App.chat.ask('${s.q.replace(/'/g,"\\'")}')">${App.icon(s.ic)} ${App.esc(s.q)}</button>`).join('')}</div>`;
         return;
@@ -433,7 +433,7 @@ window.App = (function () {
         <aside class="sidebar">
           <div class="sidebar__brand">
             <div class="sidebar__logo">P</div>
-            <div class="sidebar__brandtext"><b>PolicyOS</b><span>· Tara company brain</span></div>
+            <div class="sidebar__brandtext"><b>PolicyOS</b><span>· company brain</span></div>
           </div>
           <div class="sidebar__search" onclick="App.cmd.open()">${App.icon('search')}<span>Search or ask…</span><span class="kbd">⌘K</span></div>
           <nav class="nav" id="navRoot"></nav>
@@ -459,8 +459,8 @@ window.App = (function () {
       <aside class="chat-panel" id="chatPanel">
         <div class="chat-head">
           <div class="chat-head__logo">${App.icon('sparkles')}</div>
-          <div style="flex:1"><b>Tara</b><span>Company copilot · permission-aware</span></div>
-          <button class="btn btn--sm tara-status" title="Model status - connect a model" onclick="App.llm.openSetup()"></button>
+          <div style="flex:1"><b>PolicyOS</b><span>Company copilot · permission-aware</span></div>
+          <button class="btn btn--sm conn-status" title="Model status - connect a model" onclick="App.llm.openSetup()"></button>
           <button class="modal__x" onclick="App.chat.toggle(false)">${App.icon('x')}</button>
         </div>
         <div class="chat-body" id="chatBody"></div>
@@ -474,7 +474,7 @@ window.App = (function () {
       <div class="overlay" id="overlay"><div id="modalHost"></div></div>
       <div class="cmdk-overlay" id="cmdkOverlay" onclick="if(event.target.id==='cmdkOverlay')App.cmd.close()">
         <div class="cmdk">
-          <div class="cmdk__in">${App.icon('search')}<input id="cmdkInput" placeholder="Search pages, people, or ask Tara…" oninput="App.cmd.filter(this.value)" onkeydown="App.cmd.key(event)"/></div>
+          <div class="cmdk__in">${App.icon('search')}<input id="cmdkInput" placeholder="Search pages, people, or ask PolicyOS…" oninput="App.cmd.filter(this.value)" onkeydown="App.cmd.key(event)"/></div>
           <div class="cmdk__list" id="cmdkList"></div>
         </div>
       </div>
@@ -622,7 +622,7 @@ window.App = (function () {
     App.login(persona.id);
   };
 
-  /* ---- animated landing demo (cycles scripted Tara Q&A, incl. a denial) ---- */
+  /* ---- animated landing demo (cycles scripted PolicyOS Q&A, incl. a denial) ---- */
   App._loginTimers = [];
   function lt(fn, ms) { const id = setTimeout(fn, ms); App._loginTimers.push(id); return id; }
   App.stopLoginDemo = () => { App._loginTimers.forEach(clearTimeout); App._loginTimers = []; };
@@ -728,7 +728,7 @@ window.App = (function () {
     document.getElementById('app').innerHTML = `
       <div class="landing">
         <div class="landing__nav">
-          <div class="landing__brand"><div class="login__logo">P</div><b>PolicyOS · Tara</b></div>
+          <div class="landing__brand"><div class="login__logo">P</div><b>PolicyOS</b></div>
           <button class="btn btn--primary btn--sm" onclick="App.signIn()">Sign in</button>
         </div>
 
@@ -749,11 +749,11 @@ window.App = (function () {
         <div class="lp-section" id="lp-how">
           <div class="lp-kicker reveal">How it works</div>
           <h2 class="lp-h2 reveal">One question. The right source. The right person.</h2>
-          <p class="lp-sub reveal">Ask in plain language. Tara routes to the system that has the answer - then filters what comes back to exactly what you're allowed to see. Enforced at retrieval, not in the prompt.</p>
+          <p class="lp-sub reveal">Ask in plain language. PolicyOS routes to the system that has the answer - then filters what comes back to exactly what you're allowed to see. Enforced at retrieval, not in the prompt.</p>
           <div class="lp-features">
             ${route('shield','Policy Q&amp;A','“Personal-loan eligibility?”, “the leave policy?” → your policy library, permission-faithful, with page citations.')}
             ${route('chart','What-if simulation','“What if we raise the CIBIL cutoff to 720?” → modelled approval / NPA impact on the test cohort.')}
-            ${route('alert','Regulatory change','Upload a circular → Tara redlines every affected policy → route the changes for approval.')}
+            ${route('alert','Regulatory change','Upload a circular → PolicyOS redlines every affected policy → route the changes for approval.')}
           </div>
         </div>
 
@@ -761,10 +761,10 @@ window.App = (function () {
 
         <div class="lp-section--tint"><div class="lp-section">
           <div class="lp-kicker reveal">Built for regulated teams</div>
-          <h2 class="lp-h2 reveal">Everything Tara does</h2>
+          <h2 class="lp-h2 reveal">Everything PolicyOS does</h2>
           <div class="lp-features">
             ${feat('shield','Permission-faithful retrieval','Every answer is scoped to the asker. The model never receives a policy the user couldn’t open - so it can’t leak what a role can’t see.')}
-            ${feat('alert','Regulatory change management','Upload a circular; Tara checks it against every policy, drafts the redlines with page citations, and routes them for approval.')}
+            ${feat('alert','Regulatory change management','Upload a circular; PolicyOS checks it against every policy, drafts the redlines with page citations, and routes them for approval.')}
             ${feat('chart','What-if impact simulation','Model a rule change on the test cohort - approval rate, NPA and reclassification - before you commit it.')}
             ${feat('database','InsightGen - ask your data','“Top reasons for loan rejection” becomes SQL, runs on your warehouse and comes back as a chart. No analyst, no ticket.')}
             ${feat('branch','Policy lifecycle &amp; approvals','A versioned policy library with maker-checker workflows, audit trails and side-by-side change review.')}
@@ -779,7 +779,7 @@ window.App = (function () {
           <h2 class="lp-h2 reveal">One platform, two ways to sell it.</h2>
           <div class="usecases">
             ${uc('BFSI','Policy governance for lenders','Compliance-grade approval trails, RBAC by product, and regulator-gap checks - the original PolicyOS, now agentic.')}
-            ${uc('Compliance','From circular to approved change','Upload a new regulation; Tara shows how every policy stands against it and routes the redlines for sign-off.')}
+            ${uc('Compliance','From circular to approved change','Upload a new regulation; PolicyOS shows how every policy stands against it and routes the redlines for sign-off.')}
             ${uc('On-prem','Your data never leaves','Self-hosted and bring-your-own-LLM - keys and context stay inside your environment.')}
           </div>
         </div>

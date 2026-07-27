@@ -14,7 +14,7 @@ App.registerView('bredecoder', {
     };
     return `<div class="page">
       <div class="page__head">
-        <div><h1>BRE Decoder</h1><p>Paste raw business-rule-engine logic and Tara turns it into clean, reviewable documentation - what it does, the step-by-step logic, and the business interpretation.</p></div>
+        <div><h1>BRE Decoder</h1><p>Paste raw business-rule-engine logic and PolicyOS turns it into clean, reviewable documentation - what it does, the step-by-step logic, and the business interpretation.</p></div>
         <div class="spacer"></div>
         <span class="pill pill--teal">${App.icon('sparkles')} Claude · on-prem</span>
       </div>
@@ -95,7 +95,7 @@ App.bredecoderView = {
 
   placeholderHtml() {
     return `<div class="card" style="min-height:480px;display:flex;align-items:center;justify-content:center">
-      ${App.ui.empty('book', 'Documentation appears here', 'Paste a rule on the left and hit Generate docs - Tara explains the logic in plain English.')}
+      ${App.ui.empty('book', 'Documentation appears here', 'Paste a rule on the left and hit Generate docs - PolicyOS explains the logic in plain English.')}
     </div>`;
   },
 

@@ -198,7 +198,7 @@ App.usersAccessView = {
       const scope = parts.join(' ');
       return `<tr><td><div class="cell-strong">${App.esc(p.name)}${p.sensitive ? ' ' + App.ui.pill('Confidential', 'red') : ''}</div><div class="muted" style="font-size:12px">${App.esc(p.category)} · ${p.version}</div></td><td><div class="row wrap gap-6">${scope}</div></td><td><button class="btn btn--sm" onclick="App.accessView.edit('${p.id}')">${App.icon('edit')} Edit</button></td></tr>`;
     }).join('');
-    return `<div class="info-banner">${App.icon('shield')} <span><strong>How access is derived:</strong> category scoping over the policy library - a user sees policies in the categories assigned to them, plus any company-wide or per-person document grants. Tara enforces this at retrieval; it never returns a policy the user couldn't open.</span></div>
+    return `<div class="info-banner">${App.icon('shield')} <span><strong>How access is derived:</strong> category scoping over the policy library - a user sees policies in the categories assigned to them, plus any company-wide or per-person document grants. PolicyOS enforces this at retrieval; it never returns a policy the user couldn't open.</span></div>
       <h3 style="margin:6px 0 12px;font-size:15px">Policy access rules</h3>
       <div class="table-wrap" style="margin-bottom:24px"><table class="tbl"><thead><tr><th>Policy</th><th>Who can access</th><th></th></tr></thead><tbody>${polRows}</tbody></table></div>
       <div class="card"><div class="card__head">${App.icon('eye')}<h3>Access tester</h3><div class="spacer"></div><span class="muted" style="font-size:12px">Preview what a persona can retrieve</span></div>
@@ -214,8 +214,8 @@ App.usersAccessView = {
       const persona = DB.users.find(u => u.id === uid); const user = Object.assign({}, App.emp(uid), persona);
       const p = App.policy(pid); const ok = App.canViewPolicy(p, user);
       root.querySelector('#uaTR').innerHTML = ok
-        ? `<div class="lock-banner" style="background:var(--green-50);border-color:#bcd3c2;color:var(--green-700)">${App.icon('check')} <span><strong>${App.esc(App.emp(uid).name)}</strong> can view &amp; query “${App.esc(p.name)}”. Tara will use it as a source.</span></div>`
-        : `<div class="lock-banner">${App.icon('lock')} <span><strong>${App.esc(App.emp(uid).name)}</strong> cannot access “${App.esc(p.name)}” - Tara refuses and marks the source hidden.</span></div>`;
+        ? `<div class="lock-banner" style="background:var(--green-50);border-color:#bcd3c2;color:var(--green-700)">${App.icon('check')} <span><strong>${App.esc(App.emp(uid).name)}</strong> can view &amp; query “${App.esc(p.name)}”. PolicyOS will use it as a source.</span></div>`
+        : `<div class="lock-banner">${App.icon('lock')} <span><strong>${App.esc(App.emp(uid).name)}</strong> cannot access “${App.esc(p.name)}” - PolicyOS refuses and marks the source hidden.</span></div>`;
     };
     tu.onchange = run; tp.onchange = run; run();
   }

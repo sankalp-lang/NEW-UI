@@ -1,12 +1,12 @@
 /* ============================================================
-   PolicyOS · Tara - Integrations layer (BYO key, on-prem)
+   PolicyOS - Integrations layer (BYO key, on-prem)
    • App.llm  - pick ANY model from 6 providers + optional fallback,
-                paste that provider's key, Tara calls it from the browser.
+                paste that provider's key, PolicyOS calls it from the browser.
    • App.conn - connect data sources (Keka, GreytHR, Jira, Notion, …)
                 via API key or MCP server URL.
    No provider is preselected/default. Keys live only in this browser
    (localStorage) and are sent only to the provider/connector you choose.
-   With no model configured, Tara falls back to the offline demo engine.
+   With no model configured, PolicyOS falls back to the offline demo engine.
    ============================================================ */
 (function () {
   const App = window.App;
@@ -88,7 +88,7 @@
   /* ============================================================
      App.llm - model selection + live calls
      ============================================================ */
-  const _llmMem = {}; const llmStore = store('tara_llm_cfg', _llmMem);
+  const _llmMem = {}; const llmStore = store('policyos_llm_cfg', _llmMem);
   const LLM = {
     PROVIDERS,
     logo(id, size) { const s = (size || 18); const dom = PROVIDER_DOMAINS[id]; return dom ? logoImg(dom, id, 'llm', s) : '<span class="brand-logo" style="width:' + s + 'px;height:' + s + 'px">' + (LOGOS[id] || '') + '</span>'; },
@@ -121,7 +121,7 @@
     },
     systemPrompt(user) {
       const srcList = (App.sourceLabels ? App.sourceLabels() : []).concat(['Policies']).join(', ');
-      return 'You are Tara, the on-prem company copilot for ' + DB.company.name + ', answering for ' + user.name + ' (' + DB.roleLabels[user.role] + ', ' + user.team + ').\nRULES: Answer ONLY from the CONTEXT below - it is already filtered to what THIS user may see. If something is absent (a policy, person, or salary), say the user is not permitted to see it; never guess or use outside knowledge. Be concise; bold key values like **720**. End with a final line "SOURCES: <subset of ' + srcList + '>" (omit if none).\n\nCONTEXT:\n' + LLM.buildContext(user);
+      return 'You are PolicyOS, the on-prem company copilot for ' + DB.company.name + ', answering for ' + user.name + ' (' + DB.roleLabels[user.role] + ', ' + user.team + ').\nRULES: Answer ONLY from the CONTEXT below - it is already filtered to what THIS user may see. If something is absent (a policy, person, or salary), say the user is not permitted to see it; never guess or use outside knowledge. Be concise; bold key values like **720**. End with a final line "SOURCES: <subset of ' + srcList + '>" (omit if none).\n\nCONTEXT:\n' + LLM.buildContext(user);
     },
 
     async _call(slot, query, user) {
@@ -177,14 +177,14 @@
     },
 
     statusLabel() { const m = LLM.modelMeta('primary'); if (!m) return App.icon('plug') + ' Demo mode'; return LLM.logo(m.provider, 14) + ' ' + App.esc(m.modelLabel) + (LLM.configured() ? '' : ' · demo'); },
-    refreshBadges() { document.querySelectorAll('.tara-status').forEach(el => { el.innerHTML = LLM.statusLabel(); el.classList.toggle('is-live', LLM.configured()); }); },
+    refreshBadges() { document.querySelectorAll('.conn-status').forEach(el => { el.innerHTML = LLM.statusLabel(); el.classList.toggle('is-live', LLM.configured()); }); },
 
     /* ---- setup modal (model-card grid + optional fallback) ---- */
     _draft: null,
     openSetup() {
       const c = LLM.get();
       LLM._draft = { primary: Object.assign({ provider: '', model: '', key: '' }, c.primary), fallback: Object.assign({ provider: '', model: '', key: '' }, c.fallback), showFallback: !!(c.fallback && c.fallback.provider) };
-      App.openModal({ title: 'Connect a model', sub: 'Bring your own key. Pick any model - Tara only ever sends each user the data they\'re allowed to see. The key is optional here: pick a model to preview it in demo mode, add a key to answer live.', lg: true,
+      App.openModal({ title: 'Connect a model', sub: 'Bring your own key. Pick any model - PolicyOS only ever sends each user the data they\'re allowed to see. The key is optional here: pick a model to preview it in demo mode, add a key to answer live.', lg: true,
         body: '<div id="llmSetupBody"></div>',
         footer: (LLM.selected() ? '<button class="btn btn--danger" onclick="App.llm.clear();App.closeModal();App.toast(\'Reset to demo mode\')">Reset to demo</button>' : '') + '<button class="btn" onclick="App.closeModal()">Cancel</button><button class="btn btn--primary" onclick="App.llm._save()">Save model</button>' });
       LLM._renderSetup();
@@ -235,7 +235,7 @@
   /* ============================================================
      App.conn - data-source connectors (API key or MCP server)
      ============================================================ */
-  const _connMem = {}; const connStore = store('tara_conn_cfg', _connMem);
+  const _connMem = {}; const connStore = store('policyos_conn_cfg', _connMem);
   const CONN = {
     logo(id, size) { const s = (size || 22); const dom = CONN_DOMAINS[id]; return dom ? logoImg(dom, id, 'conn', s) : '<span class="brand-logo" style="width:' + s + 'px;height:' + s + 'px">' + (CONN_LOGOS[id] || CONN_LOGOS.policyos) + '</span>'; },
     all() { return connStore.get(); },
@@ -256,7 +256,7 @@
       App.openModal({ title: 'Connect ' + c.name, sub: c.note,
         body:
           '<div class="row gap-12" style="margin-bottom:14px">' + CONN.logo(id, 40) + '<div><div style="font-weight:600">' + App.esc(c.name) + '</div><div class="muted" style="font-size:12.5px">' + App.esc(c.kind) + ' · ' + App.esc(c.count) + '</div></div></div>' +
-          '<div class="info-banner">' + App.icon('shield') + ' <span>Tara inherits this source\'s own permissions - it never returns anything the signed-in user couldn\'t open in ' + App.esc(c.name) + ' directly.</span></div>' +
+          '<div class="info-banner">' + App.icon('shield') + ' <span>PolicyOS inherits this source\'s own permissions - it never returns anything the signed-in user couldn\'t open in ' + App.esc(c.name) + ' directly.</span></div>' +
           '<div class="field"><label>Connection method</label><select class="select" id="connMethod" style="width:100%" onchange="App.conn._draft.method=this.value;App.conn._renderField()">' + methods.map(m => '<option value="' + m.id + '"' + (m.id === CONN._draft.method ? ' selected' : '') + '>' + m.label + '</option>').join('') + '</select></div>' +
           '<div id="connField"></div>',
         footer: (CONN.isConnected(id) ? '<button class="btn btn--danger" onclick="App.conn.disconnect(\'' + id + '\')">Disconnect</button>' : '') + '<button class="btn" onclick="App.closeModal()">Cancel</button><button class="btn btn--primary" onclick="App.conn._save(\'' + id + '\')">Connect</button>' });
@@ -264,7 +264,7 @@
     },
     _renderField() {
       const host = document.getElementById('connField'); if (!host) return; const d = CONN._draft;
-      if (d.method === 'mcp') host.innerHTML = '<div class="field"><label>MCP server URL</label><input class="input" id="connUrl" placeholder="https://mcp.your-source.com/sse" value="' + App.esc(d.url) + '" oninput="App.conn._draft.url=this.value"/><div class="hint">Tara connects to your MCP server; OAuth/credentials are brokered there.</div></div>';
+      if (d.method === 'mcp') host.innerHTML = '<div class="field"><label>MCP server URL</label><input class="input" id="connUrl" placeholder="https://mcp.your-source.com/sse" value="' + App.esc(d.url) + '" oninput="App.conn._draft.url=this.value"/><div class="hint">PolicyOS connects to your MCP server; OAuth/credentials are brokered there.</div></div>';
       else if (d.method === 'oauth') host.innerHTML = '<div class="field"><label>OAuth</label><div class="pdf-ph" style="min-height:auto;padding:18px;text-align:center;cursor:pointer" onclick="App.toast(\'OAuth consent flow opens on the deployed app\')">' + App.icon('key') + '<div class="muted" style="margin-top:6px;font-size:12.5px">Authorize via the provider - paste the resulting token below, or use the hosted consent flow after deploy.</div></div><input class="input" style="margin-top:10px" id="connKey" type="password" placeholder="Access token" value="' + App.esc(d.key) + '" oninput="App.conn._draft.key=this.value"/></div>';
       else host.innerHTML = '<div class="field"><label>API key / token</label><input class="input" id="connKey" type="password" placeholder="Paste the API key from ' + '" value="' + App.esc(d.key) + '" oninput="App.conn._draft.key=this.value"/><div class="hint">Stored only in this browser; sent only to this source.</div></div>';
     },

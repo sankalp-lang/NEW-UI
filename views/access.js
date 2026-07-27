@@ -17,7 +17,7 @@ App.registerView('access', {
     }).join('');
 
     return `<div class="page">
-      <div class="page__head"><div><h1>Access Control</h1><p>Define who can view and query each policy and source. Tara enforces these rules at retrieval time - it never returns a source a user can't already open.</p></div></div>
+      <div class="page__head"><div><h1>Access Control</h1><p>Define who can view and query each policy and source. PolicyOS enforces these rules at retrieval time - it never returns a source a user can't already open.</p></div></div>
       <div class="info-banner">${App.icon('shield')} <span><strong>How access is derived:</strong> each connected source's native permissions are <strong>inherited</strong> automatically (Notion sharing, Jira roles, HRMS field visibility). The rules below are <strong>SPOC overrides &amp; source-level scoping</strong> on top of that.</span></div>
 
       <h3 style="margin:6px 0 12px;font-size:15px">Connected sources</h3>
@@ -43,8 +43,8 @@ App.registerView('access', {
       const persona = DB.users.find(u=>u.id===uid); const user = Object.assign({}, App.emp(uid), persona);
       const p = App.policy(pid); const ok = App.canViewPolicy(p, user);
       root.querySelector('#atResult').innerHTML = ok
-        ? `<div class="lock-banner" style="background:var(--green-50);border-color:#bbf7d0;color:var(--green-700)">${App.icon('check')} <span><strong>${App.esc(App.emp(uid).name)}</strong> (${DB.roleLabels[persona.role]}) <strong>can</strong> view & query “${App.esc(p.name)}”. Tara will use it as a source.</span></div>`
-        : `<div class="lock-banner">${App.icon('lock')} <span><strong>${App.esc(App.emp(uid).name)}</strong> (${DB.roleLabels[persona.role]}) <strong>cannot</strong> access “${App.esc(p.name)}”. Tara will refuse and mark the source as hidden.</span></div>`;
+        ? `<div class="lock-banner" style="background:var(--green-50);border-color:#bbf7d0;color:var(--green-700)">${App.icon('check')} <span><strong>${App.esc(App.emp(uid).name)}</strong> (${DB.roleLabels[persona.role]}) <strong>can</strong> view & query “${App.esc(p.name)}”. PolicyOS will use it as a source.</span></div>`
+        : `<div class="lock-banner">${App.icon('lock')} <span><strong>${App.esc(App.emp(uid).name)}</strong> (${DB.roleLabels[persona.role]}) <strong>cannot</strong> access “${App.esc(p.name)}”. PolicyOS will refuse and mark the source as hidden.</span></div>`;
     };
     root.querySelector('#atUser').onchange = run;
     root.querySelector('#atPol').onchange = run;
