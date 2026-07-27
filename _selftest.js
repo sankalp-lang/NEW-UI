@@ -166,9 +166,10 @@ var navAdmin = App.navModel(admin), navPM = App.navModel(personas.find(function(
 chk(navAdmin.groups.some(function(g){return g.title==='Administration' && g.items.some(function(i){return i.id==='usersaccess';});}), 'Admin sees "Users & access" under Administration');
 chk(!navAdmin.groups.some(function(g){return g.items.some(function(i){return i.id==='connectors';});}), 'Connectors parked — not in admin nav');
 chk(navPM.groups.some(function(g){return g.title==='Administration' && g.items.length===1 && g.items[0].id==='usersaccess';}), 'Policy Manager Administration = User Management only (scoped), no Categories');
-chk(navAdmin.groups.some(function(g){return g.title==='Company Brain' && g.items.some(function(i){return i.id==='assessments';});}), 'Assessments lives under Company Brain');
-chk(navAdmin.groups.some(function(g){return g.title==='Company Brain' && g.items.some(function(i){return i.id==='policies';});}), 'Policies now live under Company Brain');
-chk(App.navModel(staff).groups.some(function(g){return g.title==='Company Brain' && g.items.some(function(i){return i.id==='policies';});}), 'Staff: Policies under Company Brain too');
+chk(navAdmin.groups.some(function(g){return g.title==='Org docs' && g.items.some(function(i){return i.id==='assessments';});}), 'Assessments lives under Org docs');
+chk(navAdmin.groups.some(function(g){return g.title==='Org docs' && g.items.some(function(i){return i.id==='policies';});}), 'Policies now live under Org docs');
+chk(App.navModel(staff).groups.some(function(g){return g.title==='Org docs' && g.items.some(function(i){return i.id==='policies';});}), 'Staff: Policies under Org docs too');
+chk(navAdmin.groups.some(function(g){return g.items.some(function(i){return i.id==='regulatory' && i.label==='Governance Hub';});}), 'Nav: Regulatory module relabelled to Governance Hub');
 // Compensation removed entirely + full-page PDF view
 chk(App.canSeeComp() === false, 'Comp: canSeeComp() is false for everyone');
 chk(typeof DB.compensation === 'undefined', 'Comp: per-person compensation data removed');
@@ -262,14 +263,23 @@ var _addPid = DB.policies.map(function(p){return p.id;}).find(function(id){ retu
 var _addChBefore = App.regulatoryView._changesForPolicy(_addPid).length;
 App.regulatoryView._addPolicy(_amdId, _addPid);
 chk(App.regulatoryView._effectivePolicyIds(DB.amendments[0]).indexOf(_addPid) >= 0 && App.regulatoryView._changesForPolicy(_addPid).length === _addChBefore + 1, 'Regulatory: reviewer can add a new affected policy (with an editable manual change)');
-// Phase-1 manual upload: adds a self-uploaded circular with an AI-generated name + one-line summary
+// Phase-1 manual upload: adds a self-uploaded circular with AI-generated name + summary + EXTRACTED rules, and opens the extraction-review screen
 var _amdBefore = DB.amendments.length;
 App.regulatoryView._upFileName = 'RBI_circular.pdf';
 try { App.regulatoryView._submitUpload(); } catch(e){}
-chk(DB.amendments.length === _amdBefore + 1 && DB.amendments[0].source==='self' && !!DB.amendments[0].title && !!DB.amendments[0].summary, 'Regulatory: manual upload adds a self-uploaded circular with AI-generated name + summary');
+var _upl = DB.amendments[0];
+chk(DB.amendments.length === _amdBefore + 1 && _upl.source==='self' && !!_upl.title && !!_upl.summary && (_upl.extracted||[]).length>0 && (_upl.changes||[]).length===0, 'Regulatory: manual upload extracts rules (no policy changes until Compare) + opens Circular Detail');
+chk(App.regulatoryView.detail && App.regulatoryView.detail.amdId===_upl.id, 'Regulatory: upload opens the Circular Detail extraction-review screen');
+var _cd = App.regulatoryView._renderCircularDetail();
+chk(/Circular Detail/.test(_cd) && /cdet-tbl/.test(_cd) && new RegExp(_upl.extracted[0].conceptKey).test(_cd), 'Regulatory: Circular Detail renders the extracted-rule table');
+// reviewer confirms all, then Compare quotes the confirmed rules as NEW clauses onto the target policy → editor
+App.regulatoryView._extApproveAll(_upl.id);
+chk(_upl.extracted.every(function(r){return App.regulatoryView._extSt(r.id).status==='confirmed';}), 'Regulatory: Approve all confirms every extracted rule');
+App.regulatoryView._extCompare(_upl.id);
+chk(App.regulatoryView.detail===null && (_upl.changes||[]).length===_upl.extracted.length && _upl.changes[0].isNew===true && App.regulatoryView.editor && App.regulatoryView.editor.policyId===_upl.targetPolicy, 'Regulatory: Compare against policy quotes confirmed rules as changes and opens the editor');
 DB.amendments.shift(); // undo the uploaded circular so later render tests are unaffected
 
-App.regulatoryView.autorun = true; App.regulatoryView._amd = {}; App.regulatoryView.editor = null; App.regulatoryView._st = {}; App.regulatoryView._audit = [];
+App.regulatoryView.autorun = true; App.regulatoryView._amd = {}; App.regulatoryView.editor = null; App.regulatoryView.detail = null; App.regulatoryView._ext = {}; App.regulatoryView._st = {}; App.regulatoryView._audit = [];
 
 // "Ask Tara" fully removed: no nav item, no floating bot button, no contextual buttons
 chk(!App.navModel(admin).pinned.concat(App.navModel(admin).groups.flatMap(function(g){return g.items;})).some(function(i){return i.id==='copilot';}), 'Sidebar: no "Ask Tara" nav item for admin/manager');

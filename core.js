@@ -359,28 +359,28 @@ window.App = (function () {
   /* ---------------- nav model (role-aware) ---------------- */
   function navModel(user) {
     // User (staff): Home + the AI tools over their own policies (PolyGPT / RuleSense / BRE Decoder, read-only)
-    // + Company Brain (Policies read-only, My Assessments). No Approvals / Regulatory / InsightGen / admin.
+    // + Org docs (Policies read-only, My Assessments). No Approvals / Regulatory / InsightGen / admin.
     // Home = the chat/ask surface; Dashboard = stats, quick links & activity. (PolyGPT removed — Home is the ask.)
     if (user.role === 'user') {
       return { pinned: [ { id:'home', label:'Home', icon:'sparkles' }, { id:'dashboard', label:'Dashboard', icon:'grid' } ],
         groups: [
           { title:'Policy Management', items:[ {id:'rulesense',label:'RuleSense AI',icon:'code'}, {id:'bredecoder',label:'BRE Decoder',icon:'key'} ] },
-          { title:'Company Brain', items:[ {id:'policies',label:'Policies',icon:'file'}, {id:'assessments',label:'My Assessments',icon:'clipboard'} ] }
+          { title:'Org docs', items:[ {id:'policies',label:'Policies',icon:'file'}, {id:'assessments',label:'My Assessments',icon:'clipboard'} ] }
         ] };
     }
     const pinned = [ { id:'home', label:'Home', icon:'sparkles' }, { id:'dashboard', label:'Dashboard', icon:'grid' } ];
-    // Company Brain: the policy knowledge surface - Policies live here, alongside Assessments
+    // Org docs: the policy knowledge surface - Policies live here, alongside Assessments
     const brain = [ { id:'policies', label:'Policies', icon:'file' } ];
     if (user.role==='policy_manager'||user.role==='admin') brain.push({ id:'assessments', label:'Assessments', icon:'clipboard' });
     const groups = [
       { title:'Policy Management', items: [
         { id:'rulesense', label:'RuleSense AI', icon:'code' },
         { id:'approvals', label:'Approvals', icon:'branch' },
-        { id:'regulatory', label:'Regulatory', icon:'alert' },
+        { id:'regulatory', label:'Governance Hub', icon:'alert' },
         { id:'bredecoder', label:'BRE Decoder', icon:'key' },
         { id:'insightgen', label:'InsightGen', icon:'chart' }
       ] },
-      { title:'Company Brain', items: brain }
+      { title:'Org docs', items: brain }
     ];
     // Administration: User Management (Users & access) is visible to Admin (whole org) AND Policy Manager
     // (only the people they manage). Categories stays Admin-only.

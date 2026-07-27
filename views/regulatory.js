@@ -5,12 +5,14 @@
    DOWNLOADS the revised policy PDF to sign and run through their own approval workflow.
    One release can touch many policies; one policy can collect changes from many releases. */
 App.registerView('regulatory', {
-  title: 'Regulatory',
+  title: 'Governance Hub',
   render(ctx) {
-    if (!App.canAccessView('regulatory', ctx.user)) return App.lockedPage('Regulatory', 'Regulatory review is for administrators and policy managers.');
+    if (!App.canAccessView('regulatory', ctx.user)) return App.lockedPage('Governance Hub', 'Regulatory review is for administrators and policy managers.');
+    if (App.regulatoryView.detail) return App.regulatoryView._renderCircularDetail();
     return App.regulatoryView.editor ? App.regulatoryView._renderEditor() : App.regulatoryView._renderList(ctx);
   },
   mount(root) {
+    if (App.regulatoryView.detail) { App.regulatoryView._mountDetail(); return; }
     if (App.regulatoryView.editor) { App.regulatoryView._mountEditor(); return; }
     const s = root.querySelector('#regSearch');
     if (s) s.oninput = () => { const q = (s.value || '').toLowerCase(); root.querySelectorAll('#regRelRow').forEach(r => { r.style.display = r.dataset.n.includes(q) ? '' : 'none'; }); };
@@ -19,6 +21,8 @@ App.registerView('regulatory', {
 
 App.regulatoryView = {
   editor: null,        // { policyId, idx }
+  detail: null,        // { amdId } - the "Circular Detail" extraction-review screen (manual uploads)
+  _ext: {},            // per-extracted-rule review state: { [ruleId]: { status:'pending'|'confirmed'|'rejected', text } }
   _st: {},             // per-change state: { status:'pending'|'accepted'|'rejected'|'suggested', comment, suggestText, cmtOpen, sent }
   _audit: [],          // module audit trail (most-recent first)
   autorun: true,       // ON = every release auto-maps onto the affected policies (populates "Policies to review")
@@ -59,6 +63,7 @@ App.regulatoryView = {
     const cat = this._relCategory(a);
     const informational = chCount === 0;
     const off = !this.autorun;
+    const pendingExtraction = !!(a.extracted && a.extracted.length) && !(a.changes || []).length;
     // add/remove affected policies is a MANUAL step, available only when auto-map is OFF and the release hasn't been run yet.
     // When auto-map is ON, the circular just shows the policies it affects and they are already in review - no editing.
     const editable = canEdit && off && st.decided !== 'in';
@@ -79,7 +84,9 @@ App.regulatoryView = {
       <div class="reg-rel__h">${App.ui.pill(cat, 'blue')} <button class="reg-rel__title" title="Open circular PDF" onclick="App.pdf.openFull('amendment','${a.id}')">${App.esc(a.title)}</button><span class="muted" style="font-size:12px">· ${App.esc(a.ref)} · ${App.esc(a.date)}</span><div style="flex:1"></div>${countPill}<button class="btn btn--sm" style="margin-left:8px" onclick="App.pdf.openFull('amendment','${a.id}')">${App.icon('file')} View</button></div>
       <p class="reg-rel__sum">${App.esc(a.summary)}</p>
       ${a.description ? `<p class="reg-rel__note">${App.icon('info')} ${App.esc(a.description)}</p>` : ''}
-      ${informational ? `<div class="muted" style="font-size:12px">No policy changes mapped - open the circular to review for awareness.</div>` : `<div class="reg-rel__pols">${chips}${addBtn}</div>${decision}`}
+      ${pendingExtraction
+        ? `<div class="reg-rel__extract">${App.icon('sparkles')}<span class="muted" style="font-size:12px">Tara extracted ${a.extracted.length} rule${a.extracted.length === 1 ? '' : 's'} - review before comparing against a policy.</span><div style="flex:1"></div><button class="btn btn--sm btn--primary" onclick="App.regulatoryView.openDetail('${a.id}')">${App.icon('edit')} Review extraction</button></div>`
+        : informational ? `<div class="muted" style="font-size:12px">No policy changes mapped - open the circular to review for awareness.</div>` : `<div class="reg-rel__pols">${chips}${addBtn}</div>${decision}`}
     </div>`;
   },
   allReleasesModal() {
@@ -210,7 +217,7 @@ App.regulatoryView = {
     }).join('');
 
     return `<div class="page">
-      <div class="page__head"><div><h1>Regulatory</h1><p>New circulars from regulators, mapped to the exact policy changes they require. Review each change against the circular, edit the policy, then preview the revised draft, export it, and send it through the approval workflow for its category.</p></div><div class="spacer"></div>
+      <div class="page__head"><div><h1>Governance Hub</h1><p>New circulars from regulators, mapped to the exact policy changes they require. Review each change against the circular, edit the policy, then preview the revised draft, export it, and send it through the approval workflow for its category.</p></div><div class="spacer"></div>
         ${this._canEdit() ? `<button class="btn" onclick="App.regulatoryView._auditModal()">${App.icon('clipboard')} Audit log</button> <button class="btn btn--primary" onclick="App.regulatoryView.uploadModal()">${App.icon('download')} Upload circular</button>` : ''}</div>
       <div class="info-banner">${App.icon('shield')} <span>One circular can affect several policies, and one policy can collect changes from several circulars. Approving a change edits the draft on the right; when you're done, Preview to review the revised policy, download it as PDF or Word, and send it through your fixed approval workflow.</span></div>
       <div class="reg-stats">
@@ -555,13 +562,34 @@ App.regulatoryView = {
     const el = document.getElementById('upFile'); if (el) { el.hidden = false; el.innerHTML = App.icon('file') + ' ' + App.esc(this._upFileName); }
     const drop = document.getElementById('upDrop'); if (drop) drop.classList.add('has-file');
   },
-  // simulate the AI backend: deterministic name + one-liner (no Date/random so headless tests stay stable)
+  // simulate the AI backend: deterministic name + one-liner + extracted rule set (no Date/random so headless tests stay stable)
   _aiGenerate(fname, desc) {
     const topics = [
-      { t: 'Revised norms on unsecured retail lending', s: 'Tighter provisioning and eligibility for unsecured retail exposures.' },
-      { t: 'Updated KYC periodic-updation timelines', s: 'Shorter re-KYC cycles for higher-risk customer categories.' },
-      { t: 'Fair Practices Code - digital lending', s: 'Enhanced disclosure and cooling-off requirements for digital loans.' },
-      { t: 'Guidelines on co-lending arrangements', s: 'Revised risk-sharing and customer-consent norms for co-lending.' }
+      { t: 'Reserve Bank of India (Rural Co-operative Banks - Governance) Amendment Directions, 2026',
+        s: 'Introduces a mandatory three-year cooling-off period for directors of Rural Co-operative Banks after a continuous tenure of ten years, to prevent circumvention of tenure limits.',
+        cat: 'Compliance', extracted: [
+          { key: 'director_max_continuous_tenure_rcb', text: 'A director on the Board of a Rural Co-operative Bank (RCB) shall have a maximum continuous tenure of ten years in office.', para: '2', category: 'Governance', confidence: 'high', status: 'auto_confirmed' },
+          { key: 'director_cooling_off_period_no_association_rcb', text: 'During the cooling-off period, the director shall not be associated with the RCB in any capacity other than as a member or customer.', para: '7A', category: 'Governance', confidence: 'high', status: 'auto_confirmed' },
+          { key: 'director_cooling_off_period_exception_other_bank_rcb', text: 'The cooling-off period restriction does not preclude the director from being appointed as a director on the Board of another bank if otherwise eligible.', para: '7A', category: 'Governance', confidence: 'high', status: 'auto_confirmed' },
+          { key: 'director_reappointment_cooling_off_period_rcb', text: 'A director on the Board of an RCB, after completing a continuous tenure of ten years, shall be eligible for re-appointment only after a minimum cooling-off period of three years.', para: '7A', category: 'Governance', confidence: 'high', status: 'auto_confirmed' },
+          { key: 'continuous_tenure_calculation_rcb', text: 'For calculating continuous tenure, total time served on the Board including periods before interruptions of less than three years shall be counted; periods before interruptions of at least three years shall be excluded.', para: '7A', category: 'Governance', confidence: 'high', status: 'auto_confirmed' }
+        ] },
+      { t: 'Revised norms on unsecured retail lending', s: 'Tighter provisioning and eligibility for unsecured retail exposures.',
+        cat: 'Lending', extracted: [
+          { key: 'min_bureau_score_unsecured', text: 'The minimum bureau score for unsecured personal loans shall be raised to 720.', para: '3.1', category: 'Underwriting', confidence: 'high', status: 'auto_confirmed' },
+          { key: 'max_foir_unsecured', text: 'The maximum permissible FOIR for unsecured retail borrowers shall not exceed 50%.', para: '3.2', category: 'Underwriting', confidence: 'high', status: 'auto_confirmed' },
+          { key: 'provisioning_unsecured', text: 'Standard-asset provisioning on unsecured retail exposures is increased from 0.40% to 1.25%.', para: '4', category: 'Provisioning', confidence: 'medium', status: 'needs_review' }
+        ] },
+      { t: 'Updated KYC periodic-updation timelines', s: 'Shorter re-KYC cycles for higher-risk customer categories.',
+        cat: 'Compliance', extracted: [
+          { key: 'rekyc_cycle_high_risk', text: 'High-risk customers shall undergo periodic KYC updation at least once every 12 months.', para: '9', category: 'KYC', confidence: 'high', status: 'auto_confirmed' },
+          { key: 'rekyc_positive_confirmation', text: 'Where no change is observed, positive confirmation from the customer shall be obtained and recorded.', para: '9A', category: 'KYC', confidence: 'medium', status: 'needs_review' }
+        ] },
+      { t: 'Guidelines on co-lending arrangements', s: 'Revised risk-sharing and customer-consent norms for co-lending.',
+        cat: 'Lending', extracted: [
+          { key: 'colending_min_retention', text: 'The originating lender shall retain a minimum 20% share of each co-lent loan on its books.', para: '5', category: 'Risk sharing', confidence: 'high', status: 'auto_confirmed' },
+          { key: 'colending_customer_consent', text: 'Explicit customer consent shall be obtained disclosing the roles of each lender before disbursal.', para: '6', category: 'Consent', confidence: 'high', status: 'auto_confirmed' }
+        ] }
     ];
     return topics[((fname || '').length + (desc || '').length) % topics.length];
   },
@@ -572,21 +600,123 @@ App.regulatoryView = {
     const gen = this._aiGenerate(fname, desc);
     const n = (DB.amendments || []).length;
     const id = 'UPL-' + (n + 1); const ref = 'RBI/2026-27/' + (60 + n);
-    // Tara "detects" a plausible in-scope, editable policy to map (real detection is backend AI)
-    const target = DB.policies.find(p => App.canEditPolicy(p, u));
-    const changes = [];
-    if (target) {
-      const fk = Object.keys(target.facts || {})[0] || 'Clause';
-      changes.push({ id: id + '-' + target.id, policyId: target.id, clauseRef: 'Auto-detected', section: fk,
-        current: (target.facts && target.facts[fk]) || '(current)', suggested: (target.facts && target.facts[fk]) || '',
-        rationale: 'Detected by Tara from the uploaded circular. Review against the source clause and edit as needed.', manual: true });
-    }
-    const rel = { id: id, regulator: 'RBI', ref: ref, title: gen.t, date: '27 Jul 2026', summary: gen.s, changes: changes, source: 'self' };
+    // Tara "detects" a plausible in-scope, editable policy for the compare step (real detection is backend AI)
+    const target = DB.policies.find(p => App.canEditPolicy(p, u) && p.category === gen.cat) || DB.policies.find(p => App.canEditPolicy(p, u));
+    const extracted = (gen.extracted || []).map((r, i) => ({ id: id + '-x' + i, conceptKey: r.key, text: r.text, paraRef: r.para, category: r.category, confidence: r.confidence, validationStatus: r.status }));
+    // changes stay EMPTY until the reviewer confirms rules and clicks "Compare against policy"
+    const rel = { id: id, regulator: 'RBI', ref: ref, title: gen.t, date: '27 Jul 2026', summary: gen.s, changes: [], source: 'self', extracted: extracted, targetPolicy: target ? target.id : null };
     if (desc) rel.description = desc;
     (DB.amendments || []).unshift(rel);
-    this._log('Uploaded circular', gen.t + ' (' + ref + ') · ' + fname + (target ? ' · Tara mapped ' + target.name : ''));
+    this._log('Uploaded circular', gen.t + ' (' + ref + ') · ' + fname + ' · Tara extracted ' + extracted.length + ' rule' + (extracted.length === 1 ? '' : 's'));
     App.closeModal();
-    App.toast('Circular uploaded - Tara generated the name and summary' + (target ? (this.autorun ? ' and mapped it into review' : ' and mapped 1 affected policy') : ''), 'ok');
-    this._refresh();
+    App.toast('Circular uploaded - Tara extracted ' + extracted.length + ' rule' + (extracted.length === 1 ? '' : 's') + ' for review', 'ok');
+    // go straight to the extraction-review screen
+    this.detail = { amdId: id }; this.editor = null; this._refresh();
+  },
+
+  /* ---------------- Circular Detail: review the AI-extracted rules (manual uploads) ----------------
+     The reviewer confirms / rejects / corrects each extracted rule (or Approve all), then
+     "Compare against policy" quotes the confirmed rules as changes onto the target policy → the editor. */
+  openDetail(amdId) { this.detail = { amdId: amdId }; this.editor = null; this._log('Opened extraction review', amdId); this._refresh(); },
+  _backDetail() { this.detail = null; this._refresh(); },
+  _extSt(id) { if (!this._ext[id]) this._ext[id] = { status: 'pending', text: null }; return this._ext[id]; },
+  _extConfirm(amdId, id) { this._extSt(id).status = 'confirmed'; this._refresh(); },
+  _extReject(amdId, id) { this._extSt(id).status = 'rejected'; this._refresh(); },
+  _extReset(amdId, id) { const s = this._extSt(id); s.status = 'pending'; s.text = null; this._refresh(); },
+  _extSetText(id, val) { this._extSt(id).text = val; },
+  _extSubmit(amdId, id) {
+    const s = this._extSt(id); s.status = 'confirmed';
+    const a = (DB.amendments || []).find(x => x.id === amdId); const r = a && (a.extracted || []).find(x => x.id === id);
+    this._log('Corrected extracted rule', r ? r.conceptKey : id); this._refresh();
+  },
+  _extApproveAll(amdId) {
+    const a = (DB.amendments || []).find(x => x.id === amdId); if (!a) return;
+    (a.extracted || []).forEach(r => { this._extSt(r.id).status = 'confirmed'; });
+    this._log('Approved all extracted rules', a.ref + ' (' + (a.extracted || []).length + ')'); this._refresh();
+  },
+  _extCompare(amdId) {
+    const a = (DB.amendments || []).find(x => x.id === amdId); if (!a) return;
+    const rules = (a.extracted || []).filter(r => this._extSt(r.id).status === 'confirmed');
+    if (!rules.length) { App.toast('Confirm at least one rule before comparing against a policy', 'warn'); return; }
+    const u = App.currentUser();
+    const target = (a.targetPolicy && App.policy(a.targetPolicy)) || DB.policies.find(p => App.canEditPolicy(p, u));
+    if (!target) { App.toast('No editable policy to compare against', 'warn'); return; }
+    // quote each confirmed rule as a NEW clause change on the target policy
+    a.changes = rules.map(r => { const s = this._extSt(r.id); return {
+      id: a.id + '-' + r.id, policyId: target.id, clauseRef: 'Para ' + r.paraRef, section: r.category + ' · ' + r.conceptKey,
+      current: '(new clause)', suggested: (s.text != null ? s.text : r.text), isNew: true,
+      rationale: 'From ' + a.ref + ' (' + a.date + '), ' + r.category + ' clause - confirmed in extraction review.', manual: true };
+    });
+    this._log('Compared against policy', a.ref + ' → ' + target.name + ' · ' + rules.length + ' clause' + (rules.length === 1 ? '' : 's'));
+    this.detail = null;
+    App.toast(rules.length + ' confirmed rule' + (rules.length === 1 ? '' : 's') + ' quoted into ' + target.name, 'ok');
+    this.openEditor(target.id);
+  },
+  _mountDetail() {
+    const a = (DB.amendments || []).find(x => x.id === (this.detail && this.detail.amdId));
+    const host = document.getElementById('cdetSrc'); if (!a || !host) return;
+    try { if (App.pdf && App.pdf.renderInto) App.pdf.renderInto('cdetSrc', 'amendment', a.id, {}); else host.innerHTML = '<div class="cdet__srcfail">Failed to fetch</div>'; }
+    catch (e) { host.innerHTML = '<div class="cdet__srcfail">Failed to fetch</div>'; }
+  },
+  _extRowHtml(a, r) {
+    const s = this._extSt(r.id);
+    const confPill = App.ui.pill(r.confidence, r.confidence === 'high' ? 'green' : r.confidence === 'medium' ? 'amber' : 'gray');
+    const valPill = s.status === 'confirmed' ? App.ui.pill('confirmed', 'green', true) : s.status === 'rejected' ? App.ui.pill('rejected', 'red', true) : App.ui.pill(r.validationStatus || 'pending', 'gray', true);
+    const rowCls = s.status === 'confirmed' ? 'is-confirmed' : s.status === 'rejected' ? 'is-rejected' : '';
+    return `<tr class="${rowCls}">
+      <td><code class="cdet-key">${App.esc(r.conceptKey)}</code></td>
+      <td class="cdet-norm">${App.esc(r.text)}</td>
+      <td>${App.esc(r.paraRef)}</td>
+      <td>${App.esc(r.category)}</td>
+      <td>${confPill}</td>
+      <td>${valPill}</td>
+      <td><div class="cdet-actions">
+          <button class="btn btn--sm chg-ok${s.status === 'confirmed' ? ' is-on' : ''}" onclick="App.regulatoryView._extConfirm('${a.id}','${r.id}')">${App.icon('check')} Confirm</button>
+          <button class="btn btn--sm chg-no${s.status === 'rejected' ? ' is-on' : ''}" onclick="App.regulatoryView._extReject('${a.id}','${r.id}')">${App.icon('x')} Reject</button>
+          <button class="btn btn--sm" onclick="App.regulatoryView._extReset('${a.id}','${r.id}')">Reset</button>
+        </div>
+        <textarea class="textarea cdet-corr" rows="2" oninput="App.regulatoryView._extSetText('${r.id}',this.value)" placeholder="Edit the normalized text…">${App.esc(s.text != null ? s.text : r.text)}</textarea>
+        <button class="btn btn--sm cdet-submit" onclick="App.regulatoryView._extSubmit('${a.id}','${r.id}')">${App.icon('edit')} Submit correction</button>
+      </td>
+    </tr>`;
+  },
+  _renderCircularDetail() {
+    const a = (DB.amendments || []).find(x => x.id === (this.detail && this.detail.amdId));
+    if (!a) { this.detail = null; return this._renderList({ user: App.currentUser() }); }
+    const rules = a.extracted || [];
+    const confirmed = rules.filter(r => this._extSt(r.id).status === 'confirmed').length;
+    const rejected = rules.filter(r => this._extSt(r.id).status === 'rejected').length;
+    const rows = rules.map(r => this._extRowHtml(a, r)).join('');
+    const statusTxt = rules.length && confirmed === rules.length ? 'ready_for_compare' : 'reviewing';
+    return `<div class="page cdet">
+      <div class="reg-bk" onclick="App.regulatoryView._backDetail()">${App.icon('arrow')} Back to all circulars</div>
+      <div class="page__head"><div><h1>Circular Detail</h1><p>Tara extracted ${rules.length} rule${rules.length === 1 ? '' : 's'} from this circular. Confirm, reject, or correct each one, then compare the confirmed rules against the policy.</p></div></div>
+      <div class="cdet__grid">
+        <aside class="cdet__side">
+          <div class="cdet__meta">
+            <div class="cdet__mrow"><span>Title</span><b>${App.esc(a.title)}</b></div>
+            <div class="cdet__mrow"><span>Regulator</span><b>${App.esc(a.regulator || '-')}</b></div>
+            <div class="cdet__mrow"><span>Reference</span><b>${App.esc(a.ref || '-')}</b></div>
+            <div class="cdet__mrow"><span>Issue date</span><b>${App.esc(a.date || '-')}</b></div>
+            <div class="cdet__mrow"><span>Status</span>${App.ui.pill(statusTxt, statusTxt === 'ready_for_compare' ? 'green' : 'amber', true)}</div>
+            <div class="cdet__mrow cdet__mrow--col"><span>Summary</span><p>${App.esc(a.summary || '')}</p></div>
+            ${a.description ? `<div class="cdet__mrow cdet__mrow--col"><span>Description</span><p>${App.esc(a.description)}</p></div>` : ''}
+          </div>
+          <div class="cdet__srclbl">Circular source</div>
+          <div class="cdet__src" id="cdetSrc"></div>
+        </aside>
+        <section class="cdet__main">
+          <div class="cdet__bar">
+            <button class="btn btn--sm" onclick="App.regulatoryView._extApproveAll('${a.id}')">${App.icon('check')} Approve all</button>
+            <button class="btn btn--sm btn--primary" onclick="App.regulatoryView._extCompare('${a.id}')">${App.icon('branch')} Compare against policy</button>
+            <div style="flex:1"></div>
+            <span class="muted" style="font-size:12.5px">${confirmed}/${rules.length} confirmed${rejected ? ' · ' + rejected + ' rejected' : ''}</span>
+          </div>
+          <div class="table-wrap"><table class="tbl cdet-tbl"><thead><tr>
+            <th>Concept key</th><th>Normalized text</th><th>Para</th><th>Category</th><th>Confidence</th><th>Validation</th><th>Actions</th>
+          </tr></thead><tbody>${rows || `<tr><td colspan="7"><div class="dsh__empty">No rules were extracted from this circular.</div></td></tr>`}</tbody></table></div>
+        </section>
+      </div>
+    </div>`;
   }
 };
