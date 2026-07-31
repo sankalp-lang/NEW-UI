@@ -536,7 +536,7 @@ chk(App.insightgenView.DBS.length===_db0+1 && App.insightgenView.DBS.indexOf('Co
 // Guided product tour: one step per module the role can actually open
 chk(typeof App.tour === 'object' && typeof App.tour.start === 'function', 'Tour: engine present');
 (function(){
-  var route = function (s) { var m = /data-route="([^"]+)"/.exec(s.sel || ''); return m && m[1]; };
+  var route = function (s) { return s.route || null; };
   [['admin', admin], ['policy_manager', pmL], ['user', staff]].forEach(function (pair) {
     var role = pair[0], u = pair[1], steps = App.tour.stepsFor(u);
     var navIds = App.navModel(u).pinned.concat(App.navModel(u).groups.reduce(function(a,g){return a.concat(g.items);},[])).map(function(i){return i.id;});
@@ -560,6 +560,11 @@ chk(typeof App.tour === 'object' && typeof App.tour.start === 'function', 'Tour:
   chk(['approvals','regulatory','insightgen','usersaccess','connectors','category'].every(function(id){return sIds.indexOf(id)<0;}), 'Tour: staff never sees admin or manager sections');
   // group-bearing steps carry the sidebar group so a collapsed group can be opened first
   chk(App.tour.stepsFor(admin).filter(function(s){return s.group;}).length > 0, 'Tour: steps inside a sidebar group record that group');
+  // every module step opens its page and points at something ON that page (not at the sidebar)
+  var mods = App.tour.stepsFor(admin).filter(route);
+  chk(mods.every(function(s){ return Array.isArray(s.sels) && s.sels.length > 0 && !s.sels.some(function(x){ return /nav__item|sidebar/.test(x); }); }), 'Tour: module steps anchor to page content, never to the sidebar row');
+  chk(mods.every(function(s){ return App.tour.ANCHOR[s.route]; }), 'Tour: every module has a declared page anchor');
+  chk(typeof App.tour._target === 'function', 'Tour: anchor resolver present (first selector that exists wins)');
 })();
 
 // ===== RBAC PRD matrix: three roles, sidebar/view gating, dashboard quick actions =====

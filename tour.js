@@ -1,9 +1,9 @@
 /* ============================================================
    PolicyOS - interactive guided tour
-   A spotlight (punched-hole scrim + accent ring) walks the real app, one step per
-   module the signed-in person can actually open, read straight off their sidebar.
-   Nobody is shown a section their role cannot reach. Runs once per browser and can
-   be relaunched from the bottom-left chip or the user menu.
+   One step per module the signed-in person can actually open, read straight off their
+   sidebar. Each step OPENS that page and spotlights the part that matters on it, so the
+   tour walks the real app rather than pointing at the nav. Nobody is shown a section
+   their role cannot reach, and the page they started on is restored at the end.
    ============================================================ */
 (function () {
   const App = window.App;
@@ -32,10 +32,30 @@
       assessments: 'Policy awareness checks assigned to you. Finish each one before its window closes, then review your score and the answers you missed.'
     },
 
+    /* What to spotlight once the module is open, most relevant thing first.
+       Several are role-dependent (a manager sees a table where staff see cards), so each
+       module lists fallbacks and the first one present on the page wins. */
+    ANCHOR: {
+      home:        ['.homeask', '#homeInput'],
+      dashboard:   ['.dsh__stats', '.dsh__quick', '.page__head'],
+      rulesense:   ['#rsEditor', '.actioncard', '.grid.grid-2', '.card'],
+      approvals:   ['.table-wrap', '.kpi', '.card'],
+      regulatory:  ['.reg-polrow', '.reg-rel', '.reg-stats', '.card'],
+      bredecoder:  ['#breCode', '#breDrop', '.card'],
+      insightgen:  ['#igInput', '.card'],
+      policies:    ['.table-wrap', '.card--pad', '.card'],
+      assessments: ['.table-wrap', '.card--pad', '.kpi', '.card'],
+      usersaccess: ['.table-wrap', '.card'],
+      connectors:  ['.cn-card', '.grid', '.card'],
+      category:    ['#catGrid', '.card']
+    },
+
     stepsFor(u) {
       const m = App.navModel(u);
       const copyFor = id => (u.role === 'user' && TOUR.COPY_STAFF[id]) || TOUR.COPY[id] || '';
-      const step = (it, group) => ({ sel: '.nav__item[data-route="' + it.id + '"]', group: group || null, title: it.label, body: copyFor(it.id) });
+      // each module step OPENS its page, then points at the part that matters there
+      const step = (it, group) => ({ route: it.id, sels: TOUR.ANCHOR[it.id] || ['.page__head'],
+        group: group || null, title: it.label, body: copyFor(it.id) });
       const steps = [{ center: true, title: 'Welcome to PolicyOS', body: 'This walks through the sections your role can reach. It takes about a minute, and you can leave at any point.' }];
       m.pinned.forEach(it => steps.push(step(it, null)));
       m.groups.forEach(g => g.items.forEach(it => steps.push(step(it, g.title))));
@@ -52,6 +72,7 @@
       if (!App.state.user) return;
       TOUR.steps = TOUR.stepsFor(App.state.user);
       TOUR.i = 0;
+      TOUR._returnTo = App.state.route || 'home';   // the tour walks the app, so put them back after
       if (!el('tourLayer')) {
         const layer = document.createElement('div');
         layer.id = 'tourLayer'; layer.className = 'tour-layer';
@@ -63,6 +84,12 @@
       TOUR.go(0);
     },
     _reflow() { const l = el('tourLayer'); if (l && l.classList.contains('show')) TOUR.go(TOUR.i); },
+    // first anchor that actually exists on the open page (roles render different shapes)
+    _target(s) {
+      const list = s.sels || (s.sel ? [s.sel] : []);
+      for (let k = 0; k < list.length; k++) { const found = document.querySelector(list[k]); if (found) return found; }
+      return null;
+    },
 
     go(i) {
       TOUR.i = Math.max(0, Math.min(TOUR.steps.length - 1, i));
@@ -86,9 +113,16 @@
           </div>
         </div>`;
 
-      // a module step inside a collapsed sidebar group: open the group so the row is measurable
+      // the centered cards read best against an unscrolled page
+      if ((s.center || s.finish) && (window.scrollY || window.pageYOffset)) window.scrollTo(0, 0);
+      // open the module this step is about, so the spotlight lands on the real page
+      if (s.route && App.state.route !== s.route && App.canAccessView(s.route, App.state.user)) {
+        App.navigate(s.route);
+        window.scrollTo(0, 0);        // land at the top of the page, as a fresh visit would
+      }
+      // reflect it in the sidebar too: open the group the module sits in
       if (s.group && App.state.navOpen) { App.state.navOpen[s.group] = true; if (App.renderNav) App.renderNav(); }
-      const target = (!s.center && !s.finish && s.sel) ? document.querySelector(s.sel) : null;
+      const target = (!s.center && !s.finish) ? TOUR._target(s) : null;
       if (!target) {
         dim.classList.add('show'); ring.classList.remove('show');
         pop.style.transform = 'translate(-50%,-50%)'; pop.style.top = '50%'; pop.style.left = '50%';
@@ -103,7 +137,8 @@
         ring.style.width = (r.width + pad * 2) + 'px'; ring.style.height = (r.height + pad * 2) + 'px';
         ring.classList.add('show');
         const pw = pop.offsetWidth || 320, ph = pop.offsetHeight || 210;
-        const vw = window.innerWidth, vh = window.innerHeight;
+        const vw = window.innerWidth || document.documentElement.clientWidth || 1280;
+        const vh = window.innerHeight || document.documentElement.clientHeight || 800;
         let top, left;
         if (r.right + gap + pw < vw) { left = r.right + gap; top = clamp(r.top + r.height / 2 - ph / 2, 12, vh - ph - 12); }
         else if (r.left - gap - pw > 0) { left = r.left - gap - pw; top = clamp(r.top + r.height / 2 - ph / 2, 12, vh - ph - 12); }
@@ -112,14 +147,43 @@
         pop.style.transform = 'none'; pop.style.top = top + 'px'; pop.style.left = left + 'px';
         pop.classList.add('show');
       };
-      // only scroll if the target is actually out of view, then place after layout settles (no mid-scroll race)
+      /* Bring the target into view by aligning its TOP just under the header. Centring is wrong
+         here: tables and grids are often taller than the viewport, so centring one scrolls past
+         the page heading and lands in the middle of a list. Only scroll when it is actually needed. */
+      const scroller = (function () {
+        let n = target.parentElement;
+        while (n && n !== document.body) {
+          const st = getComputedStyle(n);
+          if (/(auto|scroll)/.test(st.overflowY) && n.scrollHeight > n.clientHeight + 4) return n;
+          n = n.parentElement;
+        }
+        return null;
+      })();
+      const TOP = 110;
       const r0 = target.getBoundingClientRect();
-      if (r0.top < 80 || r0.bottom > window.innerHeight - 24) { try { target.scrollIntoView({ block: 'center' }); } catch (e) {} }
+      // a fixed element (the assistant launcher) is always on screen: scrolling for it does nothing
+      const isFixed = getComputedStyle(target).position === 'fixed';
+      const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+      if (!isFixed && vh > 200 && (r0.top < 70 || r0.top > vh - 140)) {
+        if (scroller) {
+          const sr = scroller.getBoundingClientRect();
+          scroller.scrollTop = Math.max(0, scroller.scrollTop + (r0.top - sr.top) - 24);
+        } else {
+          window.scrollTo(0, Math.max(0, (window.scrollY || window.pageYOffset || 0) + r0.top - TOP));
+        }
+      }
       requestAnimationFrame(function () { requestAnimationFrame(place); });
     },
 
 
-    end() { TOUR._markSeen(); const l = el('tourLayer'); if (l) l.classList.remove('show'); ['tourPop', 'tourRing', 'tourDim'].forEach(function (id) { const e = el(id); if (e) e.classList.remove('show'); }); window.removeEventListener('resize', TOUR._reflow); },
+    end() {
+      TOUR._markSeen();
+      const l = el('tourLayer'); if (l) l.classList.remove('show');
+      ['tourPop', 'tourRing', 'tourDim'].forEach(function (id) { const e = el(id); if (e) e.classList.remove('show'); });
+      window.removeEventListener('resize', TOUR._reflow);
+      if (TOUR._returnTo && App.state.user && App.state.route !== TOUR._returnTo) App.navigate(TOUR._returnTo);
+      TOUR._returnTo = null;
+    },
     renderRelaunch() { if (!App.state.user || el('tourRelaunch')) return; const b = document.createElement('button'); b.id = 'tourRelaunch'; b.className = 'tour-relaunch'; b.innerHTML = App.icon('sparkles') + ' Take a tour'; b.onclick = function () { App.tour.start(); }; document.body.appendChild(b); },
     _cleanup() { ['tourLayer', 'tourRelaunch'].forEach(function (id) { const e = el(id); if (e) e.remove(); }); }
   };
