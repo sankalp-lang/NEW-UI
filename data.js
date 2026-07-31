@@ -424,7 +424,77 @@ window.DB = (function () {
       summary:'Enhanced disclosure and default-sharing norms for co-lending.', scope:'Applies if co-lending is used; informational for the current library.', changes:[] }
   ];
 
+  /* ---------- Connector tool catalog ----------
+     What each source exposes to the assistant. `write:true` = it changes state in that system
+     (needs an explicit confirm before the agent runs it). risk drives the badge in Access management. */
+  const connectorTools = {
+    keka: [
+      { id:'keka.read_directory', label:'Read employee directory', write:false, risk:'low',    note:'Names, teams, titles, reporting lines' },
+      { id:'keka.read_leave',     label:'Read leave & attendance', write:false, risk:'medium', note:'Leave balances, attendance, who is out today' },
+      { id:'keka.apply_leave',    label:'Apply for leave',         write:true,  risk:'medium', note:'Files a leave request for the signed-in user' }
+    ],
+    greythr: [
+      { id:'greythr.read_directory', label:'Read employee directory', write:false, risk:'low',    note:'Alternate HRMS directory' },
+      { id:'greythr.read_payroll',   label:'Read payroll register',   write:false, risk:'high',   note:'Payroll runs and deductions' }
+    ],
+    jira: [
+      { id:'jira.read_issues',  label:'Read issues & sprints', write:false, risk:'low',    note:'Issues, status, assignees, sprint' },
+      { id:'jira.comment',      label:'Comment on an issue',   write:true,  risk:'low',    note:'Posts a comment as the signed-in user' },
+      { id:'jira.create_issue', label:'Create an issue',       write:true,  risk:'medium', note:'Raises a new ticket in a project' },
+      { id:'jira.transition',   label:'Move issue status',     write:true,  risk:'medium', note:'Transitions an issue between states' }
+    ],
+    notion: [
+      { id:'notion.search',      label:'Search pages',   write:false, risk:'low',    note:'Inherits Notion page-level sharing' },
+      { id:'notion.read_pages',  label:'Read page content', write:false, risk:'low', note:'Only pages shared with the user' },
+      { id:'notion.create_page', label:'Create a page',  write:true,  risk:'medium', note:'Adds a page in a permitted space' }
+    ],
+    slack: [
+      { id:'slack.read_public',  label:'Read public channels', write:false, risk:'low',    note:'Public channel history' },
+      { id:'slack.read_dms',     label:'Read direct messages',  write:false, risk:'high',  note:'Private DMs - grant sparingly' },
+      { id:'slack.post_message', label:'Post to a channel',     write:true,  risk:'medium', note:'Posts as the signed-in user' }
+    ],
+    policyos: [
+      { id:'policyos.read_policies',   label:'Read policies',        write:false, risk:'low',    note:'Category + role-scoped, always permission-faithful' },
+      { id:'policyos.read_approvals',  label:'Read approvals',       write:false, risk:'low',    note:'Requests the user is allowed to see' },
+      { id:'policyos.create_approval', label:'Raise a policy change', write:true, risk:'medium', note:'Sends a change into the maker-checker workflow' },
+      { id:'policyos.assign_assessment', label:'Assign an assessment', write:true, risk:'low',   note:'Assigns a policy-awareness test' }
+    ],
+    gdrive: [
+      { id:'gdrive.search',    label:'Search files',   write:false, risk:'low', note:'Folder/file ACL inheritance' },
+      { id:'gdrive.read_file', label:'Read a document', write:false, risk:'low', note:'Only files shared with the user' }
+    ],
+    gmail: [
+      { id:'gmail.read_mail', label:'Read mailbox',  write:false, risk:'high',   note:'The user\'s own mailbox only' },
+      { id:'gmail.send_mail', label:'Send an email', write:true,  risk:'high',   note:'Sends mail as the signed-in user' }
+    ]
+  };
+
+  /* ---------- Team buckets (from the HRMS) ----------
+     A team is the unit of access: everyone on the team inherits the same scopes, so a new joiner
+     is productive on day one. Per-person deltas live in `userAccess` below. */
+  const teamAccess = {
+    "Founder's Office": { keka:['keka.read_directory','keka.read_leave'], jira:['jira.read_issues','jira.comment'], notion:['notion.search','notion.read_pages'], slack:['slack.read_public'], policyos:['policyos.read_policies','policyos.read_approvals'] },
+    'Engineering':      { keka:['keka.read_directory'], jira:['jira.read_issues','jira.comment','jira.create_issue','jira.transition'], notion:['notion.search','notion.read_pages','notion.create_page'], slack:['slack.read_public','slack.post_message'], policyos:['policyos.read_policies'] },
+    'Product':          { keka:['keka.read_directory'], jira:['jira.read_issues','jira.comment','jira.create_issue'], notion:['notion.search','notion.read_pages','notion.create_page'], slack:['slack.read_public','slack.post_message'], policyos:['policyos.read_policies','policyos.read_approvals','policyos.create_approval'] },
+    'Design':           { keka:['keka.read_directory'], jira:['jira.read_issues','jira.comment'], notion:['notion.search','notion.read_pages','notion.create_page'], slack:['slack.read_public'], policyos:['policyos.read_policies'] },
+    'Sales':            { keka:['keka.read_directory'], jira:['jira.read_issues'], notion:['notion.search','notion.read_pages'], slack:['slack.read_public','slack.post_message'], policyos:['policyos.read_policies'] },
+    'Marketing':        { keka:['keka.read_directory'], notion:['notion.search','notion.read_pages','notion.create_page'], slack:['slack.read_public','slack.post_message'], policyos:['policyos.read_policies'] },
+    'Customer Success': { keka:['keka.read_directory'], jira:['jira.read_issues','jira.comment','jira.create_issue'], notion:['notion.search','notion.read_pages'], slack:['slack.read_public','slack.post_message'], policyos:['policyos.read_policies','policyos.read_approvals'] },
+    'People & Talent':  { keka:['keka.read_directory','keka.read_leave','keka.apply_leave'], notion:['notion.search','notion.read_pages','notion.create_page'], slack:['slack.read_public','slack.post_message'], policyos:['policyos.read_policies','policyos.assign_assessment'] },
+    'Finance':          { keka:['keka.read_directory','keka.read_leave'], greythr:['greythr.read_directory','greythr.read_payroll'], notion:['notion.search','notion.read_pages'], slack:['slack.read_public'], policyos:['policyos.read_policies','policyos.read_approvals'] }
+  };
+
+  /* ---------- Per-user overrides (admin-set, on top of the team bucket) ----------
+     grant = extra scopes this person gets; revoke = scopes withheld even though their team has them.
+     Effective = team bucket ∪ grant − revoke  (admins get everything). */
+  const userAccess = {
+    'THQ0101': { grant:{ policyos:['policyos.create_approval'] }, revoke:{} },                    // Anmol - can raise policy changes
+    'THQ0165': { grant:{ policyos:['policyos.create_approval'] }, revoke:{ slack:['slack.post_message'] } },
+    'THQ0125': { grant:{}, revoke:{ jira:['jira.create_issue'] } }
+  };
+
   return { employees, teams, jiraProjects, jiraIssues, categories, policies,
            users, roleLabels, workflows, approvals, assessments, insights, rejectionReasons,
-           connectors, company, simParams, testBase, circulars, incomingCirculars, amendments };
+           connectors, connectorTools, teamAccess, userAccess,
+           company, simParams, testBase, circulars, incomingCirculars, amendments };
 })();

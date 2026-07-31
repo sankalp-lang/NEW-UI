@@ -1,9 +1,9 @@
 /* ============================================================
    PolicyOS - interactive guided tour
-   A spotlight (punched-hole scrim + accent ring) steps the user through
-   the REAL app: sidebar, the assistant, their role's first block, ⌘K, persona
-   switch - then a role-aware "what's next" finish. Runs once per browser,
-   relaunchable from the bottom-left chip or the user menu.
+   A spotlight (punched-hole scrim + accent ring) walks the real app, one step per
+   module the signed-in person can actually open, read straight off their sidebar.
+   Nobody is shown a section their role cannot reach. Runs once per browser and can
+   be relaunched from the bottom-left chip or the user menu.
    ============================================================ */
 (function () {
   const App = window.App;
@@ -12,17 +12,36 @@
   const TOUR = {
     steps: [], i: 0,
 
+    /* One step per module the signed-in person can actually reach, read straight off their
+       sidebar, so nobody is shown a section they cannot open. Copy stays at 20-30 words. */
+    COPY: {
+      home:        'Ask a question in plain language. Answers come only from the policies and sources you are cleared to see, and every one is cited.',
+      dashboard:   'Your daily overview: active policies, approvals waiting on you, open regulatory gaps and assessment progress, all scoped to the categories you own.',
+      rulesense:   'Convert a policy document into structured rules, then generate business rule engine code your developers can use directly in origination.',
+      approvals:   'Every policy change runs through maker-checker here, level by level on the workflow set for its category. Nobody can approve their own request.',
+      regulatory:  'Upload a circular, check the rules extracted from it, then review the change each affected policy needs before routing it for approval.',
+      bredecoder:  'Paste existing rule engine code and get clean documentation back in plain language. Useful when the original policy document has gone missing.',
+      insightgen:  'Ask a data question in plain language. It writes the query, runs it, and explains what the result means for the portfolio.',
+      policies:    'The library for every policy you can access, with version history and a side by side comparison showing exactly what changed.',
+      assessments: 'Build policy awareness tests, assign them by team, and track completion and scores so you can show regulators the training actually happened.',
+      usersaccess: 'Manage people, roles and reach. Access follows the categories someone owns, so a change here applies across search, answers and every module.',
+      connectors:  'Connect Keka, Jira, Notion and Slack, then set which tools each team may use. The assistant can only act inside those limits.',
+      category:    'Define the policy taxonomy. Categories drive access scoping and approval routing, so turning one off hides its policies for everyone straight away.'
+    },
+    COPY_STAFF: {
+      assessments: 'Policy awareness checks assigned to you. Finish each one before its window closes, then review your score and the answers you missed.'
+    },
+
     stepsFor(u) {
-      const firstCard = { sel: '.content .grid', title: 'Your home', body: 'Quick actions, the numbers that matter, and what needs your attention - all in one place. The ask bar up top is your front door for anything ad-hoc.' };
-      return [
-        { center: true, title: 'Welcome to PolicyOS', body: 'A 30-second tour of the on-prem, permission-faithful company brain. Skip anytime.' },
-        { sel: '.sidebar .nav', title: 'Role-aware navigation', body: 'The sidebar shows only what your role can use - Administration is admin-only.' },
-        { sel: '#homeInput', title: 'Ask in plain English', body: 'Home is your single place to ask - eligibility, a leave rule, a what-if. Answers only from what you’re allowed to see, cited to the page.' },
-        firstCard,
-        { sel: '.sidebar__search', title: 'Jump with ⌘K', body: 'Open the command palette to jump to any page, find a person, or ask PolicyOS from anywhere.' },
-        { sel: '.userchip', title: 'See the permission boundary', body: 'Switch persona here. Ask the same question as a staff user vs an admin and watch the answer change - that’s permission-faithful retrieval.' },
-        { finish: true, title: 'You’re all set', body: 'Pick a place to start - or relaunch this tour anytime from the bottom-left.' }
-      ];
+      const m = App.navModel(u);
+      const copyFor = id => (u.role === 'user' && TOUR.COPY_STAFF[id]) || TOUR.COPY[id] || '';
+      const step = (it, group) => ({ sel: '.nav__item[data-route="' + it.id + '"]', group: group || null, title: it.label, body: copyFor(it.id) });
+      const steps = [{ center: true, title: 'Welcome to PolicyOS', body: 'This walks through the sections your role can reach. It takes about a minute, and you can leave at any point.' }];
+      m.pinned.forEach(it => steps.push(step(it, null)));
+      m.groups.forEach(g => g.items.forEach(it => steps.push(step(it, g.title))));
+      steps.push({ sel: '#botFab', title: 'The assistant', body: 'It sits on every page. Ask it anything, or tell it to do something. It shows the exact action and waits for your approval.' });
+      steps.push({ finish: true, title: 'You are all set', body: 'That covers every section available to your role. You can start this tour again whenever you like from the button in the bottom left.' });
+      return steps;
     },
 
     seen() { try { return localStorage.getItem('policyos_tour_seen') === '1'; } catch (e) { return false; } },
@@ -58,7 +77,6 @@
           <div class="tour-eyebrow">${App.icon('sparkles')} Tour · ${TOUR.i + 1} of ${TOUR.steps.length}</div>
           <button class="tour-x" onclick="App.tour.end()" aria-label="Close tour">${App.icon('x')}</button>
           <h4>${App.esc(s.title)}</h4><p>${s.body}</p>
-          ${s.finish ? TOUR.finishCards() : ''}
           <div class="tour-foot">
             <div class="tour-dots">${dots}</div>
             <div class="row gap-8">
@@ -68,6 +86,8 @@
           </div>
         </div>`;
 
+      // a module step inside a collapsed sidebar group: open the group so the row is measurable
+      if (s.group && App.state.navOpen) { App.state.navOpen[s.group] = true; if (App.renderNav) App.renderNav(); }
       const target = (!s.center && !s.finish && s.sel) ? document.querySelector(s.sel) : null;
       if (!target) {
         dim.classList.add('show'); ring.classList.remove('show');
@@ -98,13 +118,6 @@
       requestAnimationFrame(function () { requestAnimationFrame(place); });
     },
 
-    finishCards() {
-      const role = App.state.user.role;
-      const cards = role === 'user' ? [['clipboard', 'Take an assessment', 'assessments'], ['file', 'Your policies', 'policies']]
-        : role === 'policy_manager' ? [['file', 'Your policies', 'policies'], ['alert', 'Regulatory gaps', 'regulatory']]
-        : [['alert', 'Regulatory', 'regulatory'], ['users', 'Users & access', 'usersaccess']];
-      return `<div class="tour-next">${cards.map(c => `<button class="tour-nextcard" onclick="App.tour.end();App.navigate('${c[2]}')"><span class="tour-nc-ic">${App.icon(c[0])}</span><span style="flex:1">${c[1]}</span>${App.icon('arrow')}</button>`).join('')}</div>`;
-    },
 
     end() { TOUR._markSeen(); const l = el('tourLayer'); if (l) l.classList.remove('show'); ['tourPop', 'tourRing', 'tourDim'].forEach(function (id) { const e = el(id); if (e) e.classList.remove('show'); }); window.removeEventListener('resize', TOUR._reflow); },
     renderRelaunch() { if (!App.state.user || el('tourRelaunch')) return; const b = document.createElement('button'); b.id = 'tourRelaunch'; b.className = 'tour-relaunch'; b.innerHTML = App.icon('sparkles') + ' Take a tour'; b.onclick = function () { App.tour.start(); }; document.body.appendChild(b); },

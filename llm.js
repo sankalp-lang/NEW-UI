@@ -99,8 +99,11 @@
     clear() { llmStore.set({}); LLM.refreshBadges(); },
 
     buildContext(user) {
-      const hrmsOn = App.hasSource && (App.hasSource('keka') || App.hasSource('greythr'));
-      const jiraOn = App.hasSource && App.hasSource('jira');
+      // a connected source only enters the context if THIS user also holds its read scope
+      // (team bucket ∪ grants − revokes) - see perm.js. Connection alone is never enough.
+      const holds = (s) => !App.access || App.access.usable(user, s);
+      const hrmsOn = !!(App.hasSource && ((App.hasSource('keka') && holds('keka.read_directory')) || (App.hasSource('greythr') && holds('greythr.read_directory'))));
+      const jiraOn = !!(App.hasSource && App.hasSource('jira') && holds('jira.read_issues'));
       const vis = App.visiblePolicies(user);
       const pol = vis.map(p => '### ' + p.name + ' (' + p.version + ', ' + p.category + ')\n' + p.summary + '\nKey parameters: ' + Object.entries(p.facts).map(([k, v]) => k + ': ' + v).join('; ') + '\nRules: ' + p.rules.join(' | ')).join('\n\n');
       const hidden = DB.policies.length - vis.length;

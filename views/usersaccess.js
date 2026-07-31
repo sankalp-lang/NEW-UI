@@ -68,7 +68,7 @@ App.usersAccessView = {
         <td>${catCell}</td>
         <td class="muted" style="font-size:12.5px">${App.usersAccessView._dateAdded(e)}</td>
         <td>Yes</td>
-        <td onclick="event.stopPropagation()"><button class="btn btn--sm btn--ghost" title="Edit user" onclick="App.usersAccessView.editUser('${e.id}')">${App.icon('edit')}</button></td>
+        <td onclick="event.stopPropagation()"><button class="btn btn--sm btn--ghost" title="Edit user" onclick="App.usersAccessView.editUser('${e.id}')">${App.icon('edit')}</button>${isAdmin ? `<button class="btn btn--sm btn--ghost" title="Connector permissions (${App.access.countFor(e.id)} scopes)" onclick="App.connectorsView.permModal('${e.id}')">${App.icon('key')}</button>` : ''}</td>
       </tr>`;
     }).join('');
     const banner = isAdmin

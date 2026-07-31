@@ -39,10 +39,10 @@ var rd = (typeof readFile !== 'undefined') ? readFile : read;
 function load(p){ try { (0, eval)(rd(p)); return null; } catch(e){ return p + ' :: ' + e; } }
 
 var loadErrors = [];
-['data.js','core.js','llm.js','sim.js','pdf.js','tour.js'].forEach(function(f){ var e=load(f); if(e) loadErrors.push('LOAD '+e); });
+['data.js','core.js','llm.js','sim.js','pdf.js','perm.js','agent.js','tour.js'].forEach(function(f){ var e=load(f); if(e) loadErrors.push('LOAD '+e); });
 
 var viewFiles = ['home','dashboard','policies','directory','access','usersaccess','rulesense',
-  'approvals','regulatory','usermgmt','category','bredecoder','insightgen','assessments'];  /* PolyGPT removed; connectors PARKED */
+  'approvals','regulatory','usermgmt','category','bredecoder','insightgen','assessments','connectors'];  /* PolyGPT removed */
 viewFiles.forEach(function(v){ var e=load('views/'+v+'.js'); if(e) loadErrors.push('LOAD '+e); });
 
 if (loadErrors.length) { print('LOAD ERRORS:\n' + loadErrors.join('\n')); throw 'stop'; }
@@ -106,7 +106,7 @@ chk(_gBefore===false && _gAfter===true, 'RBAC: a per-person document grant flips
 var ctxAdmin = App.llm.buildContext(admin), ctxStaff = App.llm.buildContext(staff);
 chk(/Personal Loan Credit Policy/.test(ctxAdmin), 'LLM context: admin context INCLUDES the personal-loan policy');
 chk(!/Personal Loan Credit Policy/.test(ctxStaff), 'LLM context: staff context EXCLUDES the personal-loan policy (moat is real)');
-chk(!/WORK IN PROGRESS|## PEOPLE/.test(ctxAdmin), 'LLM context: people/Jira parked (policies-only context)');
+chk(/## PEOPLE/.test(ctxAdmin), 'LLM context: a connected source enters the context when the user holds its read scope');
 var P = App.llm.PROVIDERS;
 chk(P.gemini.models.length===3 && P.openai.models.length===2 && P.anthropic.models.length===3 && P.sarvam.models.length===1 && P.grok.models.length===1 && P.perplexity.models.length===1,
   'LLM catalog: 3 Gemini / 2 ChatGPT / 3 Claude / 1 Sarvam / 1 Grok / 1 Perplexity');
@@ -131,11 +131,13 @@ chk(!/privilege leave|18 \/ yr/i.test(leaveAns.html), 'Category disable: Tara no
 hrCat.enabled = true;
 chk(App.visiblePolicies(admin).some(function(p){return p.id==='P-LEAVE';}), 'Category re-enable: HR leave policy returns');
 
-// CONNECTORS PARKED — Tara is policy-centric; single version (no editions)
-chk(App.hasSource('keka') === false && App.hasSource('jira') === false, 'Parked: no source is "connected" (App.hasSource always false)');
+// CONNECTORS LIVE — sources seeded from DB.connectors[].status; single version (no editions)
+chk(App.hasSource('keka') === true && App.hasSource('jira') === true, 'Connectors: seeded sources report as connected');
+chk(App.hasSource('gdrive') === false, 'Connectors: a source that is NOT connected reports false');
 chk(typeof App.edition === 'undefined' && typeof App.setEdition === 'undefined', 'Editions removed — single version');
-chk(!App.views['connectors'], 'Parked: connectors view not registered');
-chk(!App.navModel(admin).groups.some(function(g){return g.items.some(function(i){return i.id==='connectors';});}), 'Parked: Connectors not in admin nav');
+chk(!!App.views['connectors'], 'Connectors: view registered');
+chk(App.navModel(admin).groups.some(function(g){return g.items.some(function(i){return i.id==='connectors';});}), 'Connectors: in admin nav');
+chk(!App.navModel(pmL).groups.some(function(g){return g.items.some(function(i){return i.id==='connectors';});}) && !App.canAccessView('connectors', staff), 'Connectors: admin-only (not for policy manager or staff)');
 // askTara is policy-centric: people / Jira questions fall through (no HRMS/Jira source surfaced)
 var pplQ = App.askTara('who is in office today', admin);
 chk(!(pplQ.sources||[]).some(function(s){return s.kind==='hrms';}), 'Policy-centric: people query does NOT surface an HRMS source');
@@ -143,9 +145,12 @@ var workQ = App.askTara('who is working on policyos', admin);
 chk(!(workQ.sources||[]).some(function(s){return s.kind==='jira';}), 'Policy-centric: work query does NOT surface a Jira source');
 chk(/leave|18 \/ yr/i.test(App.askTara("what's the leave policy", admin).html), 'Policy Q&A still works');
 chk(/720|cibil/i.test(App.askTara('what if we raise the CIBIL cutoff to 720?', admin).html), 'What-if simulation still works');
-// LLM context is policies-only (people / Jira parked)
+// LLM context is permission-faithful per SOURCE too: no read scope → that source's block is absent
 var ctx = App.llm.buildContext(admin);
-chk(!/WORK IN PROGRESS/.test(ctx) && /POLICIES/.test(ctx), 'LLM context: policies-only (people/Jira parked)');
+chk(/WORK IN PROGRESS/.test(ctx) && /POLICIES/.test(ctx), 'LLM context: admin (holds every scope) gets policies + connected-source blocks');
+App.access.setMode(staff.id, 'jira', 'jira.read_issues', 'revoke');
+chk(!/WORK IN PROGRESS/.test(App.llm.buildContext(staff)), 'LLM context: a user without jira.read_issues gets NO Jira context even though Jira is connected');
+App.access.setMode(staff.id, 'jira', 'jira.read_issues', 'inherit');
 // suggested prompts are policy / BFSI focused (no HRMS/Jira)
 var sp = App.suggestPrompts(admin);
 chk(sp.some(function(p){return p.tag==='Lending';}) && !sp.some(function(p){return p.tag==='HRMS' || p.tag==='Jira';}), 'Prompts: admin gets BFSI/lending prompts (no HRMS/Jira)');
@@ -164,7 +169,7 @@ chk(/Demo mode/.test(App.llm.statusLabel()), 'Model: no selection falls back to 
 // Nav: admin-only Administration (Users & access + Categories); connectors parked; PM excluded
 var navAdmin = App.navModel(admin), navPM = App.navModel(personas.find(function(p){return p.id==='THQ0101';}));
 chk(navAdmin.groups.some(function(g){return g.title==='Administration' && g.items.some(function(i){return i.id==='usersaccess';});}), 'Admin sees "Users & access" under Administration');
-chk(!navAdmin.groups.some(function(g){return g.items.some(function(i){return i.id==='connectors';});}), 'Connectors parked — not in admin nav');
+chk(navAdmin.groups.some(function(g){return g.title==='Administration' && g.items.some(function(i){return i.id==='connectors';});}), 'Connectors sits under Administration for admin');
 chk(navPM.groups.some(function(g){return g.title==='Administration' && g.items.length===1 && g.items[0].id==='usersaccess';}), 'Policy Manager Administration = User Management only (scoped), no Categories');
 chk(navAdmin.groups.some(function(g){return g.title==='Org docs' && g.items.some(function(i){return i.id==='assessments';});}), 'Assessments lives under Org docs');
 chk(navAdmin.groups.some(function(g){return g.title==='Org docs' && g.items.some(function(i){return i.id==='policies';});}), 'Policies now live under Org docs');
@@ -280,6 +285,113 @@ chk(App.regulatoryView.detail===null && (_upl.changes||[]).length===_upl.extract
 DB.amendments.shift(); // undo the uploaded circular so later render tests are unaffected
 
 App.regulatoryView.autorun = true; App.regulatoryView._amd = {}; App.regulatoryView.editor = null; App.regulatoryView.detail = null; App.regulatoryView._ext = {}; App.regulatoryView._st = {}; App.regulatoryView._audit = [];
+
+/* ===== Connector access: team buckets ∪ grants − revokes, and the agentic assistant ===== */
+(function(){
+  var chirag = staff.id;                                    // Chirag Ameta - staff, HR team
+  var emp = App.emp(chirag);
+  // team bucket is the baseline
+  var teamHas = App.access.teamHas(emp.team, 'notion', 'notion.search');
+  chk(App.access.mode(chirag,'notion','notion.search') === (teamHas ? 'inherit' : 'off'), 'Access: a scope defaults to whatever the person\'s TEAM bucket says');
+  // admins hold everything by role
+  chk(App.access.mode(admin.id,'gmail','gmail.send_mail') === 'role' && App.access.has(admin,'gmail.send_mail'), 'Access: admin holds every scope by role');
+  // grant then revoke a scope for one person
+  App.access.setMode(chirag,'jira','jira.create_issue','grant');
+  chk(App.access.has(chirag,'jira.create_issue'), 'Access: per-user GRANT adds a scope the team lacks');
+  App.access.setMode(chirag,'jira','jira.create_issue','revoke');
+  chk(!App.access.has(chirag,'jira.create_issue'), 'Access: per-user REVOKE wins over the team bucket');
+  App.access.setMode(chirag,'jira','jira.create_issue','inherit');
+  // usable() also needs the source connected
+  chk(App.access.usable(admin,'jira.read_issues') === true, 'Access: usable() true when scope held AND source connected');
+  chk(App.access.usable(admin,'gdrive.search') === false && /not connected/i.test(App.access.denyReason(admin,'gdrive.search')), 'Access: usable() false + explains WHY when the source is disconnected');
+  // copy / paste permissions (new-joiner flow)
+  var anmol = 'THQ0101';
+  App.access.copy(anmol);
+  chk(App.access.clip && App.access.clip.from === anmol, 'Access: copy captures a person\'s effective permissions');
+  App.access.paste(chirag);
+  var a1 = JSON.stringify(App.access.effectiveAll(anmol)), c1 = JSON.stringify(App.access.effectiveAll(chirag));
+  chk(a1 === c1, 'Access: paste makes the target\'s effective permissions identical (new joiner cloned)');
+  DB.userAccess[chirag] = { grant:{}, revoke:{} };           // reset
+
+  // agentic assistant: plans, clarifies, gates on scope
+  chk(typeof App.agent === 'object' && App.chat === App.agent, 'Agent: assistant present and wired to the shell panel');
+  var pNav = App.agent._plan('take me to approvals', admin);
+  chk(pNav && pNav.action && pNav.action.type === 'navigate' && pNav.action.args.route === 'approvals', 'Agent: "take me to approvals" plans a navigate action');
+  var pAmb = App.agent._plan('create a jira issue', admin);
+  chk(pAmb && pAmb.clarify && pAmb.clarify.opts.length >= 2, 'Agent: a missing project raises a multiple-choice question instead of guessing');
+  var pJira = App.agent._plan('create a jira issue in TARA called fix the redline diff', admin);
+  chk(pJira && pJira.action && pJira.action.type === 'jira_create' && pJira.action.args.project === 'TARA', 'Agent: naming the project plans the create-issue action');
+  // running a write action requires the scope: staff cannot post to Slack unless their bucket allows it
+  App.access.setMode(chirag,'slack','slack.post_message','revoke');
+  chk(!App.access.usable(staff,'slack.post_message') && /does not include|not connected/i.test(App.access.denyReason(staff,'slack.post_message')), 'Agent: a revoked write scope blocks the action with a reason');
+  App.access.setMode(chirag,'slack','slack.post_message','inherit');
+  // the action actually mutates state when permitted
+  var before = DB.jiraIssues.length;
+  App.state.chat = [];
+  App.agent.ask('create a jira issue in HV called verify EPFO fallback');
+  var m = App.state.chat[App.state.chat.length-1];
+  chk(m && m.act && m.act.status === 'proposed', 'Agent: a write action is PROPOSED first, never auto-run');
+  App.agent.run(App.state.chat.length-1);
+  chk(DB.jiraIssues.length === before + 1 && m.act.status === 'done', 'Agent: Run executes the action and reports the result');
+  DB.jiraIssues.shift(); App.state.chat = [];
+
+  /* ---- regressions found by adversarial review (2026-07-27) ---- */
+  // 1. disconnect must actually stick, even for a source connected through the UI
+  App.conn._draft = { id:'gmail', method:'api', key:'sk-live', url:'' };
+  App.conn._save('gmail');
+  chk(App.conn.isConnected('gmail') === true && App.access.usable(admin,'gmail.send_mail') === true, 'Conn: connecting a source through the UI makes it usable');
+  App.conn.disconnect('gmail');
+  chk(App.conn.isConnected('gmail') === false && App.access.usable(admin,'gmail.send_mail') === false && /not connected/i.test(App.access.denyReason(admin,'gmail.send_mail')), 'Conn: DISCONNECT sticks — a UI-connected source really goes offline (was a no-op)');
+  chk(!(App.conn.all()['gmail'] && App.conn.all()['gmail'].key), 'Conn: disconnect also drops the stored credential');
+  App.conn._draft = { id:'gmail', method:'api', key:'sk-live-2', url:'' }; App.conn._save('gmail');
+  chk(App.conn.isConnected('gmail') === true, 'Conn: re-connecting after a disconnect works');
+  App.conn.disconnect('gmail');
+  // a rejected connect must NOT silently re-enable a disconnected source
+  App.conn._draft = { id:'gmail', method:'api', key:'   ', url:'' }; App.conn._save('gmail');
+  chk(App.conn.isConnected('gmail') === false, 'Conn: an empty credential does not resurrect a disconnected source');
+
+  // 2. raise_change must never invent the new value
+  var pv = App.agent._plan('amend the two-wheeler LTV to 85%', admin);
+  chk(pv && pv.action && pv.action.args.to === '85%', 'Agent: uses the value the user actually said (85%, not a default)');
+  var pv2 = App.agent._plan('raise the personal loan cibil cutoff to 900', admin);
+  chk(pv2 && pv2.action && pv2.action.args.to === '900', 'Agent: accepts a valid CIBIL of 900 instead of substituting a percentage');
+  var pv3 = App.agent._plan('raise the personal loan cibil cutoff', admin);
+  chk(pv3 && pv3.clarify && /change to/i.test(pv3.clarify.q), 'Agent: no value stated → asks instead of guessing');
+  // read-only questions must not become write proposals
+  var pq = App.agent._plan('what is the change process for a lending policy', admin);
+  chk(!(pq && pq.action && pq.action.type === 'raise_change'), 'Agent: a question about policy change does NOT propose a change');
+  var pw = App.agent._plan('what if we raise the personal loan cibil cutoff to 760', admin);
+  chk(pw && pw.action && pw.action.type === 'simulate', 'Agent: "what if" routes to the simulator, not to raising a change');
+
+  // 3. word boundaries: "profile" must not trigger the file/create verbs
+  var pp = App.agent._plan('where do I find my profile', admin);
+  chk(!(pp && pp.action), 'Agent: "profile" no longer trips the \'file\' verb');
+
+  // 4. assessments: assign the one that was named
+  var pa = App.agent._plan('assign the Information Security Refresher to Engineering', admin);
+  chk(pa && pa.action && pa.action.args.assessmentId === (DB.assessments.find(function(x){return /Information Security/.test(x.name);})||{}).id, 'Agent: assigns the assessment the user named (not always the first row)');
+
+  // 5. email: never guess a recipient from a stray first name
+  var pm = App.agent._plan('send an email about the leave policy', admin);
+  chk(pm && pm.clarify, 'Agent: no address given → asks who, never guesses a recipient');
+
+  // 6. raise_change needs EDIT rights, not just visibility
+  var pmC = personas.find(function(p){return p.id==='THQ0165';});   // Compliance PM
+  var pe = App.agent._plan('raise a change on the personal loan cibil to 720', pmC);
+  chk(!(pe && pe.action && pe.action.type === 'raise_change'), 'Agent: a manager without edit rights on that category cannot raise a change on it');
+
+  // 7. Jira keys never collide with seeded ones
+  var seeded = DB.jiraIssues.filter(function(i){return i.project==='TARA';}).map(function(i){return i.key;});
+  App.state.chat = []; App.agent.ask('create a jira issue in TARA called dedupe key check');
+  App.agent.run(App.state.chat.length-1);
+  chk(seeded.indexOf(DB.jiraIssues[0].key) < 0, 'Agent: a new Jira key does not collide with an existing one');
+  DB.jiraIssues.shift(); App.state.chat = [];
+
+  // 8. paste() reports a truthful count
+  App.access.copy('THQ0101'); var n1 = App.access.paste('THQ0125'); var n2 = App.access.paste('THQ0125');
+  chk(n1 > 0 && n2 === 0, 'Access: paste reports how many scopes moved, and 0 when already identical');
+  DB.userAccess['THQ0125'] = { grant:{}, revoke:{} };
+})();
 
 // "Ask Tara" fully removed: no nav item, no floating bot button, no contextual buttons
 chk(!App.navModel(admin).pinned.concat(App.navModel(admin).groups.flatMap(function(g){return g.items;})).some(function(i){return i.id==='copilot';}), 'Sidebar: no "Ask Tara" nav item for admin/manager');
@@ -421,10 +533,34 @@ App.insightgenView._state();
 (function(){ var g=document.getElementById; document.getElementById=function(id){ return id==='dsName'?{value:'Collections replica'}:g.call(document,id); }; App.insightgenView._doConnect('PostgreSQL'); document.getElementById=g; })();
 chk(App.insightgenView.DBS.length===_db0+1 && App.insightgenView.DBS.indexOf('Collections replica')>=0, 'InsightGen: connecting a source adds it to the queryable databases');
 
-// Guided product tour (role-aware spotlight walkthrough)
+// Guided product tour: one step per module the role can actually open
 chk(typeof App.tour === 'object' && typeof App.tour.start === 'function', 'Tour: engine present');
-chk(Array.isArray(App.tour.stepsFor(admin)) && App.tour.stepsFor(admin).length >= 5, 'Tour: admin gets a role-aware step list');
-chk(App.tour.stepsFor(staff)[3] && /home/i.test(App.tour.stepsFor(staff)[3].title), 'Tour: step list includes the home step');
+(function(){
+  var route = function (s) { var m = /data-route="([^"]+)"/.exec(s.sel || ''); return m && m[1]; };
+  [['admin', admin], ['policy_manager', pmL], ['user', staff]].forEach(function (pair) {
+    var role = pair[0], u = pair[1], steps = App.tour.stepsFor(u);
+    var navIds = App.navModel(u).pinned.concat(App.navModel(u).groups.reduce(function(a,g){return a.concat(g.items);},[])).map(function(i){return i.id;});
+    var stepIds = steps.map(route).filter(Boolean);
+    // every module in that person's sidebar gets a step, in sidebar order, and nothing else does
+    chk(JSON.stringify(stepIds) === JSON.stringify(navIds), 'Tour [' + role + ']: one step per sidebar module, in order');
+    // never a step for something the role cannot open
+    chk(stepIds.every(function (id) { return App.canAccessView(id, u); }), 'Tour [' + role + ']: no step points at a module this role cannot open');
+    // the command palette step is gone
+    chk(!steps.some(function (s) { return /⌘K|command palette/i.test((s.title || '') + (s.body || '')); }), 'Tour [' + role + ']: no command-palette step');
+    // last step is the finish card, and it offers no module shortcuts
+    var last = steps[steps.length - 1];
+    chk(last.finish === true && !/tour-nextcard|tour-next/.test(last.body || ''), 'Tour [' + role + ']: final step is Done/Back only, no module options');
+    // copy is tight and free of em dashes
+    var bad = steps.filter(function (s) { var w = String(s.body || '').split(/\s+/).filter(Boolean).length; return w < 18 || w > 32 || /—|–| - /.test(s.body || ''); });
+    chk(bad.length === 0, 'Tour [' + role + ']: every description is 20-30 words with no dashes' + (bad.length ? ' (bad: ' + bad.map(function(b){return b.title;}).join(', ') + ')' : ''));
+  });
+  // a staff user sees fewer steps than an admin, and never the admin-only sections
+  var sIds = App.tour.stepsFor(staff).map(route).filter(Boolean);
+  chk(App.tour.stepsFor(staff).length < App.tour.stepsFor(admin).length, 'Tour: staff walkthrough is shorter than the admin one');
+  chk(['approvals','regulatory','insightgen','usersaccess','connectors','category'].every(function(id){return sIds.indexOf(id)<0;}), 'Tour: staff never sees admin or manager sections');
+  // group-bearing steps carry the sidebar group so a collapsed group can be opened first
+  chk(App.tour.stepsFor(admin).filter(function(s){return s.group;}).length > 0, 'Tour: steps inside a sidebar group record that group');
+})();
 
 // ===== RBAC PRD matrix: three roles, sidebar/view gating, dashboard quick actions =====
 chk(Object.keys(DB.roleLabels).length===3 && DB.roleLabels.admin && DB.roleLabels.policy_manager && DB.roleLabels.user, 'Roles: exactly three (admin, policy_manager, user)');

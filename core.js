@@ -387,6 +387,7 @@ window.App = (function () {
     if (user.role==='admin') {
       groups.push({ title:'Administration', items: [
         { id:'usersaccess', label:'Users & access', icon:'users' },
+        { id:'connectors', label:'Connectors', icon:'plug' },
         { id:'category', label:'Categories', icon:'layers' } ] });
     } else if (user.role==='policy_manager') {
       groups.push({ title:'Administration', items: [ { id:'usersaccess', label:'Users & access', icon:'users' } ] });
@@ -484,6 +485,7 @@ window.App = (function () {
     App.renderNav();
     if (App.llm && App.llm.refreshBadges) App.llm.refreshBadges();
     if (App.tour) App.tour.renderRelaunch();
+    if (App.agent && App.agent.renderFab) App.agent.renderFab();   // floating assistant launcher
   }
 
   /* ---------------- user menu ---------------- */
@@ -517,6 +519,8 @@ window.App = (function () {
       $('.content').scrollTop = 0; return;
     }
     $('#tbTitle').textContent = (typeof def.title==='function'?def.title(ctx):def.title) || '';
+    // optional enter() hook: lets a view reset its own drill-down state when re-opened from the nav
+    if (def.enter && App.state.params.keepState !== true) { try { def.enter(ctx); } catch (e) {} }
     try { root.innerHTML = def.render(ctx); if (def.mount) def.mount(root, ctx); }
     catch(err){ root.innerHTML = `<div class="page">${App.ui.empty('alert','View error', String(err))}</div>`; console.error(err); }
     $('.content').scrollTop = 0;
@@ -593,7 +597,7 @@ window.App = (function () {
   };
   // ask on the Home chat from anywhere (dashboard quick-knowledge, cmd-palette)
   App.goAskHome = (q) => { if (!App.state.home) App.state.home = []; App.navigate('home'); if (App.home) App.home.ask(q); };
-  App.logout = () => { App.state.user = null; App.state.chat = []; if (App.tour) App.tour._cleanup(); renderLogin(); };
+  App.logout = () => { App.state.user = null; App.state.chat = []; if (App.tour) App.tour._cleanup(); if (App.agent) App.agent._cleanup(); renderLogin(); };
 
   App.signIn = () => {
     const rk = { admin:'violet', policy_manager:'blue', user:'green' };
